@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BLBL Music Player</title>
+    <script>
+      (function() {
+        var html = document.documentElement;
+        var saved = null;
+        try {
+          saved = localStorage.getItem('blbl-theme-storage');
+        } catch(e) {}
+        var isDark = false;
+        if (saved) {
+          try { isDark = JSON.parse(saved).state.isDark === true; } catch(e) {}
+        } else {
+          isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        }
+        if (isDark) html.classList.add('dark');
+        html.style.opacity = '0';
+        html.style.transition = 'opacity 0.4s ease';
+        window._themeReady = true;
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
