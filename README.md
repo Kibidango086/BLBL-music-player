@@ -1,30 +1,27 @@
 # BLBL Music Player
 
-> Bilibili 音频播放器 — 把 B 站变成你的音乐库
-
-[English](#) | 简体中文
+> — 把 B 站变成你的音乐库
 
 ---
 
 ## 简介
 
-BLBL Music Player 是一款基于 Electron 构建的桌面应用，让你能够以音乐播放器的形式体验 Bilibili 视频内容。支持搜索、播放列表管理、收藏夹浏览、倍速播放、系统媒体会话集成等功能。
+BLBL Music Player 是一款基于 Electron 构建的桌面应用，让你能够以音乐播放器的形式体验 Bilibili 视频内容。
 
 ## 功能特性
 
-- **B 站搜索** — 直接在应用内搜索 Bilibili 视频
+- **B站搜索** — 直接在应用内搜索 Bilibili 视频
 - **播放列表** — 创建和管理自己的播放队列，支持拖拽排序
 - **收藏夹浏览** — 登录后可浏览 B 站收藏夹内容
-- **倍速播放** — 支持 0.5x ~ 2x 倍速，可自定义输入
-- **深色模式** — 基于 View Transitions API 的平滑主题切换
-- **系统媒体控制** — 支持键盘媒体键、蓝牙控制、系统媒体中心显示
 - **多语言** — 简体中文 / 繁体中文
 - **网络代理** — 支持 HTTP/HTTPS/SOCKS 代理及认证
 - **跨平台** — Windows、macOS、Linux
 
 ## 截图
 
-（待补充）
+此图截自 Linux 版本。
+
+![Preview1](docs/images/preview1.png)
 
 ## 安装
 
@@ -81,17 +78,6 @@ bun run build
 ├── public/             # 静态资源
 └── package.json
 ```
-
-### 自动构建
-
-本项目使用 GitHub Actions 进行多平台自动构建。推送以 `v` 开头的 tag 即可触发：
-
-```bash
-git tag -a v1.0.0 -m "Release v1.0.0"
-git push origin v1.0.0
-```
-
-构建产物将自动上传到 GitHub Releases。
 
 ## 协议
 
