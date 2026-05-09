@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -25,14 +25,18 @@ export function SearchView({ onPlay, onAddToPlaylist }: SearchViewProps) {
   const { t } = useI18nStore()
   const { showToast } = useToastStore()
 
-  const parentRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const virtualizer = useVirtualizer({
     count: videos.length,
-    getScrollElement: () => parentRef.current,
+    getScrollElement: () => scrollRef.current,
     estimateSize: () => 108,
     overscan: 5,
     gap: 8
   })
+
+  useEffect(() => {
+    virtualizer.setOptions({ count: videos.length } as any)
+  }, [videos.length])
 
   const performSearch = useCallback(async () => {
     if (!query.trim()) return
@@ -85,7 +89,7 @@ export function SearchView({ onPlay, onAddToPlaylist }: SearchViewProps) {
         </div>
       </motion.div>
 
-      <ScrollArea className="flex-1 px-8 pb-8" ref={parentRef}>
+      <ScrollArea className="flex-1 px-8 pb-8" viewportRef={scrollRef}>
         {loading && (
           <div className="flex items-center gap-2 text-[14px] text-vercel-gray-500 dark:text-[#666666] py-4">
             <motion.div

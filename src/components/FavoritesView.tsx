@@ -31,14 +31,18 @@ export function FavoritesView({ mediaId, folderName, onBack, onPlay, onAddToPlay
   const { showToast } = useToastStore()
   const { t } = useI18nStore()
 
-  const parentRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const virtualizer = useVirtualizer({
     count: videos.length,
-    getScrollElement: () => parentRef.current,
+    getScrollElement: () => scrollRef.current,
     estimateSize: () => 100,
     overscan: 5,
     gap: 8
   })
+
+  useEffect(() => {
+    virtualizer.setOptions({ count: videos.length } as any)
+  }, [videos.length])
 
   const loadContent = useCallback(async (pn: number) => {
     setLoading(true)
@@ -146,7 +150,7 @@ export function FavoritesView({ mediaId, folderName, onBack, onPlay, onAddToPlay
         </div>
       </div>
 
-      <ScrollArea className="flex-1 px-8 pb-8" ref={parentRef}>
+      <ScrollArea className="flex-1 px-8 pb-8" viewportRef={scrollRef}>
         {error && (
           <div className="py-4 text-[14px] text-red-500">
             {t('search.error')}: {error}

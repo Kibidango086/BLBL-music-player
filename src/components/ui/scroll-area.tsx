@@ -2,22 +2,43 @@ import * as React from 'react'
 import * as ScrollAreaPrimitive from '@radix-ui/react-scroll-area'
 import { cn } from '@/lib/utils'
 
+interface ScrollAreaProps extends React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> {
+  viewportRef?: React.Ref<HTMLDivElement>
+}
+
 const ScrollArea = React.forwardRef<
   React.ElementRef<typeof ScrollAreaPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({ className, children, ...props }, ref) => (
-  <ScrollAreaPrimitive.Root
-    ref={ref}
-    className={cn('relative overflow-hidden', className)}
-    {...props}
-  >
-    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit] pr-3">
-      {children}
-    </ScrollAreaPrimitive.Viewport>
-    <ScrollBar />
-    <ScrollAreaPrimitive.Corner />
-  </ScrollAreaPrimitive.Root>
-))
+  ScrollAreaProps
+>(({ className, children, viewportRef, ...props }, ref) => {
+  const [viewportElement, setViewportElement] = React.useState<HTMLDivElement | null>(null)
+
+  React.useEffect(() => {
+    if (viewportRef) {
+      if (typeof viewportRef === 'function') {
+        viewportRef(viewportElement)
+      } else if (viewportRef && 'current' in viewportRef) {
+        (viewportRef as React.MutableRefObject<HTMLDivElement | null>).current = viewportElement
+      }
+    }
+  }, [viewportElement, viewportRef])
+
+  return (
+    <ScrollAreaPrimitive.Root
+      ref={ref}
+      className={cn('relative overflow-hidden', className)}
+      {...props}
+    >
+      <ScrollAreaPrimitive.Viewport
+        ref={setViewportElement}
+        className="h-full w-full rounded-[inherit] pr-3"
+      >
+        {children}
+      </ScrollAreaPrimitive.Viewport>
+      <ScrollBar />
+      <ScrollAreaPrimitive.Corner />
+    </ScrollAreaPrimitive.Root>
+  )
+})
 ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName
 
 const ScrollBar = React.forwardRef<

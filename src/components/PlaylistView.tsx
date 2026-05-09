@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Trash2, Music, Save, Lock, Globe } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -28,14 +28,18 @@ export function PlaylistView({ onPlay }: PlaylistViewProps) {
   const [saveLoading, setSaveLoading] = useState(false)
   const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null)
 
-  const parentRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const virtualizer = useVirtualizer({
     count: playlist.length,
-    getScrollElement: () => parentRef.current,
+    getScrollElement: () => scrollRef.current,
     estimateSize: () => 84,
     overscan: 5,
     gap: 8
   })
+
+  useEffect(() => {
+    virtualizer.setOptions({ count: playlist.length } as any)
+  }, [playlist.length])
 
   const handleSaveToFav = async () => {
     if (!saveTitle.trim() || playlist.length === 0) return
@@ -160,7 +164,7 @@ export function PlaylistView({ onPlay }: PlaylistViewProps) {
         )}
       </AnimatePresence>
 
-<ScrollArea className="flex-1 px-8 pb-8" ref={parentRef}>
+<ScrollArea className="flex-1 px-8 pb-8" viewportRef={scrollRef}>
         {playlist.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
