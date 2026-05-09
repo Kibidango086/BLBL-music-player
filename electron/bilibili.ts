@@ -50,17 +50,37 @@ async function fetchBiliAPI(url: string) {
 }
 
 function adaptSearchResult(item: any): any {
+  let picUrl = item.pic || ''
+  if (picUrl && !picUrl.startsWith('http')) {
+    picUrl = picUrl.startsWith('//') ? 'https:' + picUrl : picUrl
+  }
+
+  let faceUrl = item.owner?.face || ''
+  if (faceUrl && !faceUrl.startsWith('http')) {
+    faceUrl = faceUrl.startsWith('//') ? 'https:' + faceUrl : faceUrl
+  }
+
+  let duration = 0
+  if (typeof item.duration === 'number') {
+    duration = item.duration
+  } else if (typeof item.duration === 'string') {
+    const parts = item.duration.split(':')
+    if (parts.length === 2) {
+      duration = parseInt(parts[0]) * 60 + parseInt(parts[1])
+    }
+  }
+
   return {
     bvid: item.bvid || '',
     aid: item.aid || 0,
     title: item.title || '无标题',
     description: item.description || '',
-    pic: item.pic || '',
-    duration: typeof item.duration === 'number' ? item.duration : 0,
+    pic: picUrl,
+    duration: duration,
     owner: {
       mid: item.owner?.mid || item.mid || 0,
       name: item.owner?.name || item.author || 'Unknown',
-      face: item.owner?.face || ''
+      face: faceUrl
     },
     stat: {
       view: item.stat?.view || item.play || 0,
@@ -82,17 +102,25 @@ export async function searchBilibili(keyword: string, page = 1, pageSize = 20) {
 export async function getVideoInfo(bvid: string) {
   const url = `${API_BASE}/x/web-interface/view?bvid=${bvid}`
   const data = await fetchBiliAPI(url)
+  let picUrl = data.pic || ''
+  if (picUrl && !picUrl.startsWith('http')) {
+    picUrl = picUrl.startsWith('//') ? 'https:' + picUrl : picUrl
+  }
+  let faceUrl = data.owner?.face || ''
+  if (faceUrl && !faceUrl.startsWith('http')) {
+    faceUrl = faceUrl.startsWith('//') ? 'https:' + faceUrl : faceUrl
+  }
   return {
     bvid: data.bvid || bvid,
     aid: data.aid || 0,
     title: data.title || '无标题',
     description: data.desc || '',
-    pic: data.pic || '',
+    pic: picUrl,
     duration: typeof data.duration === 'number' ? data.duration : 0,
     owner: {
       mid: data.owner?.mid || 0,
       name: data.owner?.name || 'Unknown',
-      face: data.owner?.face || ''
+      face: faceUrl
     },
     stat: {
       view: data.stat?.view || 0,

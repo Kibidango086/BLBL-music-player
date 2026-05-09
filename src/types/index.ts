@@ -26,7 +26,17 @@ export interface PlayUrl {
   format: string
 }
 
-export interface PlaylistItem extends BilibiliVideo {
+export interface PlaylistItem {
+  bvid: string
+  aid?: number
+  title: string
+  description?: string
+  pic?: string
+  duration?: number
+  owner?: { mid?: number; name?: string; face?: string }
+  stat?: { view?: number; like?: number; coin?: number; favorite?: number }
+  pubdate?: number
+  cid?: number
   addedAt: number
 }
 

@@ -135,7 +135,17 @@ export const usePlayerStore = create<PlayerStore>()(
         volume: state.volume,
         muted: state.muted,
         playbackRate: state.playbackRate,
-        playlist: state.playlist,
+        playlist: state.playlist.map(t => ({
+          bvid: t.bvid,
+          aid: t.aid,
+          title: t.title,
+          pic: t.pic,
+          duration: t.duration,
+          owner: t.owner,
+          stat: t.stat,
+          pubdate: t.pubdate,
+          addedAt: t.addedAt
+        })),
         repeatMode: state.repeatMode,
         shuffle: state.shuffle
       })

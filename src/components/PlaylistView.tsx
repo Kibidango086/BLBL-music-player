@@ -1,14 +1,15 @@
-import { useState } from 'react'
-import { Play, Trash2, Music, Save, Lock, Globe, ExternalLink, Copy } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { Trash2, Music, Save, Lock, Globe } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { VideoCard } from '@/components/ui/video-card'
 import { usePlayerStore } from '@/store/playerStore'
 import { useUserStore } from '@/store/userStore'
 import { useToastStore } from '@/store/toastStore'
 import { useI18nStore } from '@/i18n'
-import { formatDuration } from '@/lib/bilibili-api'
-import { stripHtml, getHighResPic } from '@/lib/utils'
+import { getHighResPic } from '@/lib/utils'
 import type { PlaylistItem } from '@/types'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -27,6 +28,15 @@ export function PlaylistView({ onPlay }: PlaylistViewProps) {
   const [saveLoading, setSaveLoading] = useState(false)
   const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null)
 
+  const parentRef = useRef<HTMLDivElement>(null)
+  const virtualizer = useVirtualizer({
+    count: playlist.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 84,
+    overscan: 5,
+    gap: 8
+  })
+
   const handleSaveToFav = async () => {
     if (!saveTitle.trim() || playlist.length === 0) return
     setSaveLoading(true)
@@ -36,7 +46,7 @@ export function PlaylistView({ onPlay }: PlaylistViewProps) {
       const mediaId = folderData?.id
       if (!mediaId) throw new Error('创建收藏夹失败')
 
-      await window.electronAPI.biliAddToFav(playlist.map((v) => v.aid), mediaId)
+      await window.electronAPI.biliAddToFav(playlist.map((v) => v.aid).filter((a): a is number => !!a), mediaId)
 
       setSaveResult({ success: true, message: t('playlist.saveSuccess') })
       showToast(t('playlist.saveSuccess'), 'success')
@@ -150,7 +160,7 @@ export function PlaylistView({ onPlay }: PlaylistViewProps) {
         )}
       </AnimatePresence>
 
-      <ScrollArea className="flex-1 px-8 pb-8">
+<ScrollArea className="flex-1 px-8 pb-8" ref={parentRef}>
         {playlist.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -162,84 +172,49 @@ export function PlaylistView({ onPlay }: PlaylistViewProps) {
             <p className="text-[12px] mt-1">{t('playlist.emptyHint')}</p>
           </motion.div>
         ) : (
-          <div className="space-y-2">
-            <AnimatePresence>
-              {playlist.map((video, index) => {
-                const isCurrent = currentTrack?.bvid === video.bvid
-                return (
-                  <motion.div
-                    key={video.bvid || `pl-${index}`}
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 12, scale: 0.95 }}
-                    transition={{ duration: 0.2, delay: Math.min(index * 0.02, 0.2) }}
-                    className={`group flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                      isCurrent
-                        ? 'bg-vercel-gray-50 dark:bg-[#141414] shadow-border'
-                        : 'bg-white dark:bg-[#0a0a0a] shadow-border hover:shadow-subtle-elevation'
-                    }`}
-                  >
-                    <motion.span
-                      animate={isCurrent ? { scale: [1, 1.2, 1] } : {}}
-                      transition={{ duration: 0.8, repeat: isCurrent ? Infinity : 0 }}
-                      className={`text-[12px] w-6 text-center font-mono ${
-                        isCurrent ? 'text-vercel-link' : 'text-vercel-gray-400 dark:text-[#666666]'
-                      }`}
-                    >
-                      {index + 1}
-                    </motion.span>
-
-                    <div className="relative w-12 h-12 flex-shrink-0 rounded overflow-hidden bg-vercel-gray-50 dark:bg-[#141414]">
-                      {video.pic ? (
-                        <img src={getHighResPic(video.pic)} alt={stripHtml(video.title)} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-vercel-gray-100 dark:bg-[#1f1f1f]" />
-                      )}
-                      {isCurrent && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                          <div className="flex gap-0.5">
-                            {[0, 1, 2].map((i) => (
-                              <motion.div key={i} animate={{ height: [4, 12, 4] }} transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }} className="w-1 bg-white rounded-full" />
-                            ))}
-                          </div>
-                        </motion.div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <h3 className={`text-[13px] font-medium truncate leading-tight select-text ${isCurrent ? 'text-vercel-link' : 'text-vercel-black dark:text-[#ededed]'}`}>
-                        {stripHtml(video.title)}
-                      </h3>
-                      <p className="text-[11px] text-vercel-gray-500 dark:text-[#808080] mt-0.5 truncate select-text">
-                        {video.owner?.name || t('common.unknown')} · {formatDuration(video.duration || 0)}
-                      </p>
-                    </div>
-
-                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-vercel-gray-400 dark:text-[#808080] hover:text-vercel-black dark:hover:text-[#ededed]" onClick={async () => {
-                        if (video.bvid) await window.electronAPI.openExternal(`https://www.bilibili.com/video/${video.bvid}`)
-                      }}>
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-vercel-gray-400 dark:text-[#808080] hover:text-vercel-black dark:hover:text-[#ededed]" onClick={async () => {
-                        if (video.bvid) {
-                          await navigator.clipboard.writeText(video.bvid)
-                          showToast(`${video.bvid} 已复制`, 'success')
-                        }
-                      }}>
-                        <Copy className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7 dark:text-[#ededed] dark:hover:bg-[#141414]" onClick={() => onPlay(video)}>
-                        <Play className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-vercel-gray-400 dark:text-[#666666] hover:text-red-500" onClick={() => removeFromPlaylist(video.bvid)}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </motion.div>
-                )
-              })}
-            </AnimatePresence>
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: '100%',
+              position: 'relative'
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const video = playlist[virtualItem.index]
+              const isCurrent = currentTrack?.bvid === video.bvid
+              return (
+                <div
+                  key={video.bvid || virtualItem.index}
+                  className="mb-2"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualItem.start}px)`
+                  }}
+                >
+                  <VideoCard
+                    bvid={video.bvid}
+                    title={video.title}
+                    pic={getHighResPic(video.pic)}
+                    duration={video.duration}
+                    owner={video.owner}
+                    size="small"
+                    index={virtualItem.index}
+                    isCurrent={isCurrent}
+                    showIndex
+                    onPlay={() => onPlay(video)}
+                    onRemove={() => removeFromPlaylist(video.bvid)}
+                    onOpenExternal={video.bvid ? () => window.electronAPI.openExternal(`https://www.bilibili.com/video/${video.bvid}`) : undefined}
+                    onCopyBvid={video.bvid ? () => {
+                      navigator.clipboard.writeText(video.bvid)
+                      showToast(`${video.bvid} 已复制`, 'success')
+                    } : undefined}
+                  />
+                </div>
+              )
+            })}
           </div>
         )}
       </ScrollArea>

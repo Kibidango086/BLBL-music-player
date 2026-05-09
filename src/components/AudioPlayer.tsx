@@ -6,12 +6,13 @@ export function AudioPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null)
   const [audioSrc, setAudioSrc] = useState<string | null>(null)
   const [errorCount, setErrorCount] = useState(0)
-  const {
-    currentTrack,
-    isPlaying,
-    volume,
-    muted,
+const { 
+    currentTrack, 
+    isPlaying, 
+    volume, 
+    muted, 
     playbackRate,
+    repeatMode,
     setPlaying,
     setCurrentTime,
     setDuration,
@@ -150,8 +151,16 @@ export function AudioPlayer() {
   }, [setDuration])
 
   const handleEnded = useCallback(() => {
-    playNext()
-  }, [playNext])
+    if (repeatMode === 'one') {
+      const audio = audioRef.current
+      if (audio) {
+        audio.currentTime = 0
+        audio.play().catch(() => {})
+      }
+    } else {
+      playNext()
+    }
+  }, [playNext, repeatMode])
 
   const handleError = useCallback(() => {
     console.error('Audio element error')

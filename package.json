@@ -1,6 +1,6 @@
 {
   "name": "blbl-music-player",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Bilibili as a music player - Electron app with Vercel design",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -10,7 +10,12 @@
     "electron:dev": "vite --mode development",
     "electron:build": "vite build && electron-builder"
   },
-  "keywords": ["electron", "bilibili", "music", "player"],
+  "keywords": [
+    "electron",
+    "bilibili",
+    "music",
+    "player"
+  ],
   "author": "OpenCode",
   "homepage": "https://github.com/Kibidango086/BLBL-music-player",
   "license": "MIT",
@@ -39,6 +44,7 @@
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-tabs": "^1.0.4",
     "@radix-ui/react-tooltip": "^1.0.7",
+    "@tanstack/react-virtual": "^3.13.24",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "framer-motion": "^12.38.0",
@@ -60,13 +66,27 @@
       "dist-electron/**/*"
     ],
     "mac": {
-      "target": ["dmg"]
+      "target": [
+        "dmg"
+      ]
     },
     "win": {
-      "target": [{"target": "zip", "arch": ["x64", "ia32"]}]
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ]
     },
     "linux": {
-      "target": ["AppImage", "deb", "rpm"],
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
       "icon": "icon.svg",
       "category": "AudioVideo",
       "maintainer": "OpenCode"
