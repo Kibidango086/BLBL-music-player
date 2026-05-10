@@ -73,7 +73,7 @@ export default {
   'settings.clearDesc': '清除本地存储的播放列表和设置',
   'settings.clearAll': '清除所有数据',
   'settings.about': '关于',
-  'settings.version': 'BLBL Music Player v1.0.2',
+  'settings.version': 'BLBL Music Player v1.0.3',
   'settings.techStack': '基于 Electron + React + shadcn/ui 构建',
   'settings.design': '设计灵感来自 Vercel / Geist',
   'settings.language': '语言',

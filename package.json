@@ -1,6 +1,6 @@
 {
   "name": "blbl-music-player",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Bilibili as a music player - Electron app with Vercel design",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -16,7 +16,7 @@
     "music",
     "player"
   ],
-  "author": "OpenCode",
+  "author": "Kibidango086",
   "homepage": "https://github.com/Kibidango086/BLBL-music-player",
   "license": "MIT",
   "devDependencies": {
