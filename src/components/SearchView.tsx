@@ -1,5 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
+import { useState, useCallback } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -24,19 +23,6 @@ export function SearchView({ onPlay, onAddToPlaylist }: SearchViewProps) {
   const [error, setError] = useState<string | null>(null)
   const { t } = useI18nStore()
   const { showToast } = useToastStore()
-
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const virtualizer = useVirtualizer({
-    count: videos.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => 108,
-    overscan: 5,
-    gap: 8
-  })
-
-  useEffect(() => {
-    virtualizer.setOptions({ count: videos.length } as any)
-  }, [videos.length])
 
   const performSearch = useCallback(async () => {
     if (!query.trim()) return
@@ -89,7 +75,7 @@ export function SearchView({ onPlay, onAddToPlaylist }: SearchViewProps) {
         </div>
       </motion.div>
 
-      <ScrollArea className="flex-1 px-8 pb-8" viewportRef={scrollRef}>
+      <ScrollArea className="flex-1 px-8 pb-8">
         {loading && (
           <div className="flex items-center gap-2 text-[14px] text-vercel-gray-500 dark:text-[#666666] py-4">
             <motion.div
@@ -108,27 +94,9 @@ export function SearchView({ onPlay, onAddToPlaylist }: SearchViewProps) {
         )}
 
         {videos.length > 0 && (
-          <div
-            style={{
-              height: `${virtualizer.getTotalSize()}px`,
-              width: '100%',
-              position: 'relative'
-            }}
-          >
-            {virtualizer.getVirtualItems().map((virtualItem) => {
-              const video = videos[virtualItem.index]
-              return (
-                <div
-                  key={video.bvid || virtualItem.index}
-                  className="mb-2"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    transform: `translateY(${virtualItem.start}px)`
-                  }}
-                >
+          <div className="space-y-2">
+            {videos.map((video, index) => (
+                <div key={video.bvid || index}>
                   <VideoCard
                     bvid={video.bvid}
                     title={video.title}
@@ -144,8 +112,7 @@ export function SearchView({ onPlay, onAddToPlaylist }: SearchViewProps) {
                     }}
                   />
                 </div>
-              )
-            })}
+            ))}
           </div>
         )}
       </ScrollArea>

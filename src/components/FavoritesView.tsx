@@ -1,6 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
-import type { VirtualizerOptions } from '@tanstack/react-virtual'
+import { useState, useEffect, useCallback } from 'react'
 import { ArrowLeft, ListPlus, ListRestart, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -31,31 +29,16 @@ export function FavoritesView({ mediaId, folderName, onBack, onPlay, onAddToPlay
   const { showToast } = useToastStore()
   const { t } = useI18nStore()
 
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const virtualizer = useVirtualizer({
-    count: videos.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => 100,
-    overscan: 5,
-    gap: 8
-  })
-
-  useEffect(() => {
-    virtualizer.setOptions({ count: videos.length } as any)
-  }, [videos.length])
-
   const loadContent = useCallback(async (pn: number) => {
     setLoading(true)
     setError(null)
     try {
       const results = await window.electronAPI.biliFavContent(mediaId, pn, 20)
-      const newCount = pn === 1 ? results.length : videos.length + results.length
       if (pn === 1) {
         setVideos(results)
       } else {
         setVideos((prev) => [...prev, ...results])
       }
-      virtualizer.setOptions({ count: newCount } as VirtualizerOptions<HTMLDivElement, Element>)
       setHasMore(results.length === 20)
     } catch (err: any) {
       console.error(err)
@@ -150,7 +133,7 @@ export function FavoritesView({ mediaId, folderName, onBack, onPlay, onAddToPlay
         </div>
       </div>
 
-      <ScrollArea className="flex-1 px-8 pb-8" viewportRef={scrollRef}>
+      <ScrollArea className="flex-1 px-8 pb-8">
         {error && (
           <div className="py-4 text-[14px] text-red-500">
             {t('search.error')}: {error}
@@ -158,26 +141,9 @@ export function FavoritesView({ mediaId, folderName, onBack, onPlay, onAddToPlay
         )}
 
         {videos.length > 0 && (
-          <div
-            style={{
-              height: `${virtualizer.getTotalSize()}px`,
-              width: '100%',
-              position: 'relative'
-            }}
-          >
-            {virtualizer.getVirtualItems().map((virtualItem) => {
-              const video = videos[virtualItem.index]
-              return (
-                <div
-                  key={video.id || virtualItem.index}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    transform: `translateY(${virtualItem.start}px)`
-                  }}
-                >
+          <div className="space-y-2">
+            {videos.map((video, index) => (
+                <div key={video.id || index}>
                   <VideoCard
                     bvid={video.bvid}
                     title={video.title}
@@ -195,8 +161,7 @@ export function FavoritesView({ mediaId, folderName, onBack, onPlay, onAddToPlay
                     } : undefined}
                   />
                 </div>
-              )
-            })}
+            ))}
           </div>
         )}
 

@@ -146,6 +146,9 @@ export const usePlayerStore = create<PlayerStore>()(
           pubdate: t.pubdate,
           addedAt: t.addedAt
         })),
+        currentTrack: state.currentTrack,
+        currentTime: state.currentTime,
+        isPlaying: state.isPlaying,
         repeatMode: state.repeatMode,
         shuffle: state.shuffle
       })

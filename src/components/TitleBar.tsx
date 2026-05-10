@@ -15,7 +15,7 @@ export function TitleBar() {
   return (
     <div
       className="h-9 flex items-center justify-between flex-shrink-0 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur border-b border-vercel-gray-100 dark:border-[#1f1f1f] z-50 select-none"
-      style={{ ['WebkitAppRegion' as any]: 'drag' }}
+      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
       {isMac ? (
         <>
@@ -32,7 +32,7 @@ export function TitleBar() {
               {t('app.name')}
             </span>
           </div>
-          <div className="flex items-center h-full" style={{ ['WebkitAppRegion' as any]: 'no-drag' }}>
+          <div className="flex items-center h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
             <button
               onClick={() => window.electronAPI.minimize()}
               className="h-full px-4 flex items-center justify-center text-vercel-gray-500 dark:text-[#808080] hover:bg-vercel-gray-100 dark:hover:bg-[#1f1f1f] transition-colors"

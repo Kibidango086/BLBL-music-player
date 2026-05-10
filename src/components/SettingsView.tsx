@@ -241,7 +241,13 @@ export function SettingsView() {
             {t('settings.dataManagement')}
           </h3>
           <p className="text-[13px] text-vercel-gray-500 dark:text-[#808080] mt-1">{t('settings.clearDesc')}</p>
-          <Button variant="outline" size="sm" className="mt-4" onClick={() => { logout(); localStorage.clear(); showToast('所有数据已清除', 'info'); setTimeout(() => window.location.reload(), 600) }}>
+          <Button variant="outline" size="sm" className="mt-4" onClick={() => {
+            const storageKeys = ['blbl-player-storage', 'blbl-proxy-storage', 'blbl-theme-storage', 'blbl-locale-storage', 'blbl-user-storage', 'blbl-user-storage']
+            storageKeys.forEach(key => localStorage.removeItem(key))
+            logout()
+            showToast('所有数据已清除', 'info')
+            setTimeout(() => window.location.reload(), 600)
+          }}>
             <Trash2 className="w-3.5 h-3.5 mr-2" />
             {t('settings.clearAll')}
           </Button>

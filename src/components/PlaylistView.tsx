@@ -1,5 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
+import { useState } from 'react'
 import { Trash2, Music, Save, Lock, Globe } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,20 +25,7 @@ export function PlaylistView({ onPlay }: PlaylistViewProps) {
   const [saveTitle, setSaveTitle] = useState('')
   const [savePrivacy, setSavePrivacy] = useState(0)
   const [saveLoading, setSaveLoading] = useState(false)
-  const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null)
-
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const virtualizer = useVirtualizer({
-    count: playlist.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => 84,
-    overscan: 5,
-    gap: 8
-  })
-
-  useEffect(() => {
-    virtualizer.setOptions({ count: playlist.length } as any)
-  }, [playlist.length])
+const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null)
 
   const handleSaveToFav = async () => {
     if (!saveTitle.trim() || playlist.length === 0) return
@@ -164,7 +150,7 @@ export function PlaylistView({ onPlay }: PlaylistViewProps) {
         )}
       </AnimatePresence>
 
-<ScrollArea className="flex-1 px-8 pb-8" viewportRef={scrollRef}>
+<ScrollArea className="flex-1 px-8 pb-8">
         {playlist.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -176,28 +162,11 @@ export function PlaylistView({ onPlay }: PlaylistViewProps) {
             <p className="text-[12px] mt-1">{t('playlist.emptyHint')}</p>
           </motion.div>
         ) : (
-          <div
-            style={{
-              height: `${virtualizer.getTotalSize()}px`,
-              width: '100%',
-              position: 'relative'
-            }}
-          >
-            {virtualizer.getVirtualItems().map((virtualItem) => {
-              const video = playlist[virtualItem.index]
+          <div className="space-y-2">
+            {playlist.map((video, index) => {
               const isCurrent = currentTrack?.bvid === video.bvid
               return (
-                <div
-                  key={video.bvid || virtualItem.index}
-                  className="mb-2"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    transform: `translateY(${virtualItem.start}px)`
-                  }}
-                >
+                <div key={video.bvid || index}>
                   <VideoCard
                     bvid={video.bvid}
                     title={video.title}
@@ -205,7 +174,7 @@ export function PlaylistView({ onPlay }: PlaylistViewProps) {
                     duration={video.duration}
                     owner={video.owner}
                     size="small"
-                    index={virtualItem.index}
+                    index={index}
                     isCurrent={isCurrent}
                     showIndex
                     onPlay={() => onPlay(video)}

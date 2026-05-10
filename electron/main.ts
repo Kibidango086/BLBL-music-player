@@ -32,16 +32,16 @@ function getIconPath(): string | undefined {
 }
 
 const createWindow = () => {
-  const isMac = process.platform === 'darwin'
   const icon = getIconPath()
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    titleBarStyle: isMac ? 'hidden' : undefined,
-    trafficLightPosition: isMac ? { x: 16, y: 12 } : undefined,
-    frame: !isMac,
+    frame: false,
+    autoHideMenuBar: true,
+    titleBarStyle: 'hidden' as const,
     ...(icon ? { icon } : {}),
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#0a0a0a' : '#ffffff',
     show: false,
@@ -55,7 +55,6 @@ const createWindow = () => {
 
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
-    mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
@@ -249,16 +248,5 @@ ipcMain.handle('get-proxy', async () => {
     return { rules }
   } catch {
     return { rules: '' }
-  }
-})
-
-session.defaultSession.webRequest.onAuthRequired((details, callback) => {
-  if (details.isProxy && proxyCredentials.username) {
-    callback({
-      username: proxyCredentials.username,
-      password: proxyCredentials.password || ''
-    })
-  } else {
-    callback()
   }
 })

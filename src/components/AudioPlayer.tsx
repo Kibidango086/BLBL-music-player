@@ -13,6 +13,7 @@ const {
     muted, 
     playbackRate,
     repeatMode,
+    currentTime,
     setPlaying,
     setCurrentTime,
     setDuration,
@@ -74,6 +75,31 @@ const {
       audio.pause()
     }
   }, [isPlaying, audioSrc, setPlaying])
+
+  // Restore playback position only on initial load (app start)
+  const isFirstLoadRef = useRef(true)
+
+  useEffect(() => {
+    if (!audioSrc || !audioRef.current || !isFirstLoadRef.current) return
+    if (currentTime === 0) {
+      isFirstLoadRef.current = false
+      return
+    }
+
+    const audio = audioRef.current
+    const restorePosition = () => {
+      if (audio.duration > 0) {
+        audio.currentTime = Math.min(currentTime, audio.duration)
+      }
+      isFirstLoadRef.current = false
+    }
+
+    if (audio.duration > 0) {
+      restorePosition()
+    } else {
+      audio.addEventListener('loadedmetadata', restorePosition, { once: true })
+    }
+  }, [audioSrc, currentTime])
 
   // Handle volume
   useEffect(() => {
@@ -141,7 +167,7 @@ const {
   const handleTimeUpdate = useCallback(() => {
     const audio = audioRef.current
     if (!audio) return
-    setCurrentTime(audio.currentTime)
+    setCurrentTime(Math.floor(audio.currentTime))
   }, [setCurrentTime])
 
   const handleLoadedMetadata = useCallback(() => {
