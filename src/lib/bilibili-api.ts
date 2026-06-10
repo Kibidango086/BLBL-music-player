@@ -24,3 +24,17 @@ export function formatNumber(num: number): string {
   }
   return num.toString()
 }
+
+export interface SubtitleItem {
+  from: number
+  to: number
+  content: string
+}
+
+export async function getVideoSubtitles(bvid: string, cid: number): Promise<SubtitleItem[]> {
+  try {
+    return await window.electronAPI.biliSubtitles(bvid, cid)
+  } catch {
+    return []
+  }
+}

@@ -48,7 +48,7 @@ export function LazyImage({ src, wrapperClassName, className, ...props }: LazyIm
       )}
       {!loaded && inView && (
         <div
-          className="absolute inset-0 bg-vercel-gray-50 dark:bg-[#141414] animate-pulse"
+          className="absolute inset-0 bg-accent animate-pulse"
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
       )}

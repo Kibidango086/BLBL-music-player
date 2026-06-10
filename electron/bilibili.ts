@@ -1,7 +1,46 @@
 import { net, session } from 'electron'
-import type { IncomingMessage } from 'http'
+import type { IncomingMessage } from "http"
+import crypto from 'crypto'
 
 const API_BASE = 'https://api.bilibili.com'
+
+const MIXIN_KEY_ENC_TAB = [
+  46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35,
+  27, 43, 5, 49, 33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13,
+  37, 48, 7, 16, 24, 55, 40, 61, 26, 17, 0, 1, 60, 51, 30, 4,
+  22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11, 36, 20, 52, 44, 34
+]
+
+let cachedWbiKey = ''
+let cachedWbiKeyTime = 0
+
+async function getWbiKey(): Promise<string> {
+  const now = Date.now()
+  if (cachedWbiKey && now - cachedWbiKeyTime < 3600000) return cachedWbiKey
+  try {
+    const res = await request(`${API_BASE}/x/web-interface/nav`)
+    const data = JSON.parse(res.body)
+    const imgUrl: string = data?.data?.wbi_img?.img_url || ''
+    const subUrl: string = data?.data?.wbi_img?.sub_url || ''
+    const imgKey = imgUrl.split('/').pop()?.split('.')[0] || ''
+    const subKey = subUrl.split('/').pop()?.split('.')[0] || ''
+    const raw = imgKey + subKey
+    cachedWbiKey = MIXIN_KEY_ENC_TAB.map(i => raw[i] || '').join('')
+    cachedWbiKeyTime = now
+    return cachedWbiKey
+  } catch {
+    return cachedWbiKey
+  }
+}
+
+function signWbi(params: Record<string, string | number>, mixinKey: string) {
+  const wts = Math.floor(Date.now() / 1000)
+  const all = { ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])), wts: String(wts) }
+  const sorted = Object.keys(all).sort().map(k => `${k}=${encodeURIComponent(all[k])}`).join('&')
+  const w_rid = crypto.createHash('md5').update(sorted + mixinKey).digest('hex')
+  return { w_rid, wts }
+}
+
 
 function request(url: string, options?: { headers?: Record<string, string>; method?: string; body?: string }): Promise<{ statusCode: number; headers: Record<string, string | string[]>; body: string }> {
   return new Promise((resolve, reject) => {
@@ -247,5 +286,114 @@ export async function getLoginStatus(): Promise<{ isLogin: boolean; mid?: number
     return { isLogin: data.isLogin, mid: data.mid, uname: data.uname, face: data.face }
   } catch {
     return { isLogin: false }
+  }
+}
+
+export interface SubtitleItem {
+  from: number
+  to: number
+  content: string
+}
+
+
+export async function getVideoSubtitles(bvid: string, cid: number): Promise<SubtitleItem[]> {
+  console.log(`[Subtitle] === Fetching for bvid=${bvid} cid=${cid} ===`)
+
+  try {
+    // Step 1: Get video info to find the EXACT page CID
+    const viewUrl = `${API_BASE}/x/web-interface/view?bvid=${encodeURIComponent(bvid)}`
+    const viewRes = await request(viewUrl)
+    if (viewRes.statusCode !== 200) { console.log('[Subtitle] View API HTTP err'); return [] }
+    const viewData = JSON.parse(viewRes.body)
+    if (viewData.code !== 0) { console.log('[Subtitle] View API code err'); return [] }
+
+    const aid = viewData.data?.aid || 0
+    const pages: any[] = viewData.data?.pages || []
+    let targetCid = cid
+    if (!targetCid && pages.length > 0) targetCid = pages[0].cid
+
+    const targetPage = pages.find((p: any) => p.cid === targetCid)
+    if (!targetPage) { console.log(`[Subtitle] No page for cid=${targetCid}`); return [] }
+
+    console.log(`[Subtitle] Matched: cid=${targetCid} aid=${aid} part="${targetPage.part || ''}"`)
+
+    // Step 2: Try WBI-signed player API ONLY (non-WBI returns wrong cached data)
+    const mixinKey = await getWbiKey()
+
+    let bestSubs: any[] = []
+    let usedEndpoint = ''
+
+    // WBI endpoints first (correct data)
+    if (mixinKey) {
+      // WBI + bvid
+      const bvidSigned = signWbi({ bvid, cid: String(targetCid) }, mixinKey)
+      const wbiBvidUrl = `${API_BASE}/x/player/wbi/v2?bvid=${encodeURIComponent(bvid)}&cid=${targetCid}&w_rid=${bvidSigned.w_rid}&wts=${bvidSigned.wts}`
+      const res1 = await request(wbiBvidUrl)
+      if (res1.statusCode === 200) {
+        const d = JSON.parse(res1.body)
+        if (d.code === 0) {
+          const subs = d.data?.subtitle?.subtitles || []
+          console.log(`[Subtitle] wbi+bvid → subs=${subs.length}`)
+          if (subs.length > 0) { bestSubs = subs; usedEndpoint = 'wbi+bvid' }
+        }
+      }
+    }
+
+    if (bestSubs.length === 0 && mixinKey) {
+      // WBI + aid
+      const aidSigned = signWbi({ aid: String(aid), cid: String(targetCid) }, mixinKey)
+      const wbiAidUrl = `${API_BASE}/x/player/wbi/v2?aid=${aid}&cid=${targetCid}&w_rid=${aidSigned.w_rid}&wts=${aidSigned.wts}`
+      const res2 = await request(wbiAidUrl)
+      if (res2.statusCode === 200) {
+        const d = JSON.parse(res2.body)
+        if (d.code === 0) {
+          const subs = d.data?.subtitle?.subtitles || []
+          console.log(`[Subtitle] wbi+aid → subs=${subs.length}`)
+          if (subs.length > 0) { bestSubs = subs; usedEndpoint = 'wbi+aid' }
+        }
+      }
+    }
+
+    // Non-WBI endpoint is UNRELIABLE — returns stale cached data from wrong videos.
+    // WBI is the browser's endpoint. If WBI says 0, the video truly has no subtitles.
+
+    if (bestSubs.length === 0) { console.log('[Subtitle] No subs'); return [] }
+
+    // Step 3: Try all subtitle entries, prefer Chinese, first valid wins
+    const ordered = [
+      ...bestSubs.filter((s: any) => s.lan === 'zh-Hans' || s.lan === 'zh-CN'),
+      ...bestSubs.filter((s: any) => !(s.lan === 'zh-Hans' || s.lan === 'zh-CN')),
+    ]
+
+    for (const sub of ordered) {
+      if (!sub.subtitle_url) continue
+      let subUrl: string = sub.subtitle_url
+      if (subUrl.startsWith('//')) subUrl = 'https:' + subUrl
+      if (!subUrl.startsWith('http')) subUrl = 'https:' + subUrl
+
+      console.log(`[Subtitle] Trying ${sub.lan_doc || sub.lan}: ${subUrl.substring(0, 80)}...`)
+
+      const subRes = await request(subUrl)
+      if (subRes.statusCode !== 200) { console.log(`[Subtitle] HTTP ${subRes.statusCode}`); continue }
+
+      const subData = JSON.parse(subRes.body)
+      const items: SubtitleItem[] = (subData?.body || []).map((item: any) => ({
+        from: typeof item.from === 'number' ? item.from : 0,
+        to: typeof item.to === 'number' ? item.to : 0,
+        content: item.content || ''
+      })).filter((i: SubtitleItem) => i.content.trim())
+
+      if (items.length > 0) {
+        console.log(`[Subtitle] ✅ ${items.length} lines (${sub.lan_doc || sub.lan})`)
+        console.log(`[Subtitle] Sample:`, items.slice(0, 2).map(i => `[${i.from}-${i.to}] ${i.content}`))
+        return items
+      }
+    }
+
+    console.log('[Subtitle] All subtitle URLs returned empty')
+    return []
+  } catch (err) {
+    console.error('[Subtitle] Error:', err)
+    return []
   }
 }

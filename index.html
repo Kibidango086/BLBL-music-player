@@ -5,13 +5,14 @@
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BLBL Music Player</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet">
     <script>
       (function() {
         var html = document.documentElement;
         var saved = null;
-        try {
-          saved = localStorage.getItem('blbl-theme-storage');
-        } catch(e) {}
+        try { saved = localStorage.getItem('blbl-theme-storage'); } catch(e) {}
         var isDark = false;
         if (saved) {
           try { isDark = JSON.parse(saved).state.isDark === true; } catch(e) {}
@@ -19,9 +20,6 @@
           isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         }
         if (isDark) html.classList.add('dark');
-        html.style.opacity = '0';
-        html.style.transition = 'opacity 0.4s ease';
-        window._themeReady = true;
       })();
     </script>
   </head>

@@ -17,6 +17,7 @@ const {
     setPlaying,
     setCurrentTime,
     setDuration,
+    updateCurrentTrackCid,
     playNext,
     playPrevious
   } = usePlayerStore()
@@ -39,6 +40,8 @@ const {
           console.error('No cid found for video:', currentTrack!.bvid)
           return
         }
+        // Store CID for subtitle fetching later
+        updateCurrentTrackCid(info.cid)
         const urls = await getPlayUrl(currentTrack!.bvid, info.cid)
         if (urls.length > 0 && !cancelled) {
           setAudioSrc(urls[0].url)

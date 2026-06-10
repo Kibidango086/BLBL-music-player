@@ -3,7 +3,7 @@ import { LazyImage } from './lazy-image'
 import { formatDuration, formatNumber } from '@/lib/bilibili-api'
 import { stripHtml } from '@/lib/utils'
 import { Button } from './button'
-import { Play, Plus, ExternalLink, Copy, Trash2 } from 'lucide-react'
+import { Icon } from './icon'
 
 export interface VideoCardProps {
   bvid: string
@@ -67,21 +67,21 @@ export function VideoCard({
 
   return (
     <div
-      className={`group flex items-center ${gapClass} ${paddingClass} rounded-lg bg-white dark:bg-[#0a0a0a] shadow-border hover:shadow-card transition-shadow mx-1 ${
-        isCurrent ? 'bg-vercel-gray-50 dark:bg-[#141414]' : ''
+      className={`group flex items-center ${gapClass} ${paddingClass} rounded-xl bg-card border border-border hover:border-ring hover:-translate-y-px hover:shadow transition-all mx-1 ${
+        isCurrent ? 'bg-secondary' : ''
       }`}
     >
       {showIndex && (
         <span
           className={`text-[12px] w-6 text-center font-mono ${
-            isCurrent ? 'text-vercel-link' : 'text-vercel-gray-400 dark:text-[#666666]'
+            isCurrent ? 'text-primary' : 'text-muted-foreground'
           }`}
         >
           {(index ?? 0) + 1}
         </span>
       )}
 
-      <div className={`relative flex-shrink-0 ${imageWrapperClass} bg-vercel-gray-50 dark:bg-[#141414] flex items-center justify-center`}>
+      <div className={`relative flex-shrink-0 ${imageWrapperClass} bg-accent flex items-center justify-center`}>
         {imageUrl ? (
           <LazyImage
             src={imageUrl}
@@ -89,7 +89,7 @@ export function VideoCard({
             className={`w-full h-full ${isLarge ? 'object-cover' : 'object-contain'}`}
           />
         ) : (
-          <div className="w-full h-full bg-vercel-gray-100 dark:bg-[#1f1f1f]" />
+          <div className="w-full h-full bg-accent" />
         )}
         {isLarge && (
           <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 rounded text-[11px] text-white font-mono">
@@ -102,8 +102,8 @@ export function VideoCard({
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
-                  className="w-1 bg-white rounded-full animate-pulse"
-                  style={{ height: '4px', animationDelay: `${i * 0.15}s` }}
+                  className="w-1 bg-white rounded-full"
+                  style={{ height: '4px', animation: `playingBar 0.5s ease-in-out infinite ${i * 0.15}s` }}
                 />
               ))}
             </div>
@@ -114,12 +114,12 @@ export function VideoCard({
       <div className="flex-1 min-w-0">
         <h3
           className={`${titleSize} font-medium truncate leading-tight select-text ${
-            isCurrent ? 'text-vercel-link' : 'text-vercel-black dark:text-[#ededed]'
+            isCurrent ? 'text-primary' : 'text-foreground'
           }`}
         >
           {stripHtml(title)}
         </h3>
-        <div className={`flex items-center gap-3 mt-1.5 ${metaSize} text-vercel-gray-500 dark:text-[#808080]`}>
+        <div className={`flex items-center gap-3 mt-1.5 ${metaSize} text-muted-foreground`}>
           {isLarge ? (
             <>
               <span className="truncate">{authorName}</span>
@@ -141,50 +141,50 @@ export function VideoCard({
           <Button
             size="icon"
             variant="ghost"
-            className="h-8 w-8 text-vercel-gray-400 dark:text-[#808080] hover:text-vercel-black dark:hover:text-[#ededed]"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
             onClick={onOpenExternal}
           >
-            <ExternalLink className={isLarge ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
+            <Icon name="open_in_new" size={isLarge ? 16 : 14} />
           </Button>
         )}
         {onCopyBvid && (
           <Button
             size="icon"
             variant="ghost"
-            className="h-8 w-8 text-vercel-gray-400 dark:text-[#808080] hover:text-vercel-black dark:hover:text-[#ededed]"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
             onClick={onCopyBvid}
           >
-            <Copy className={isLarge ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
+            <Icon name="content_copy" size={isLarge ? 16 : 14} />
           </Button>
         )}
         {onPlay && (
           <Button
             size="icon"
             variant="ghost"
-            className={`h-8 w-8 dark:text-[#ededed] dark:hover:bg-[#141414] ${!isLarge ? 'h-7 w-7' : ''}`}
+            className={`h-8 w-8 hover:text-primary ${!isLarge ? 'h-7 w-7' : ''}`}
             onClick={onPlay}
           >
-            <Play className={isLarge ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
+            <Icon name="play_arrow" size={isLarge ? 16 : 14} />
           </Button>
         )}
         {onAddToPlaylist && (
           <Button
             size="icon"
             variant="ghost"
-            className="h-8 w-8 dark:text-[#ededed] dark:hover:bg-[#141414]"
+            className="h-8 w-8 hover:text-primary"
             onClick={onAddToPlaylist}
           >
-            <Plus className="w-4 h-4" />
+            <Icon name="add" size={16} />
           </Button>
         )}
         {onRemove && (
           <Button
             size="icon"
             variant="ghost"
-            className={`h-8 w-8 text-vercel-gray-400 dark:text-[#666666] hover:text-red-500 ${!isLarge ? 'h-7 w-7' : ''}`}
+            className={`h-8 w-8 text-muted-foreground hover:text-red-500 ${!isLarge ? 'h-7 w-7' : ''}`}
             onClick={onRemove}
           >
-            <Trash2 className={isLarge ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
+            <Icon name="delete" size={isLarge ? 16 : 14} />
           </Button>
         )}
       </div>

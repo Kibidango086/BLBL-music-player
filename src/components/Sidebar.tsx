@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Search, ListMusic, Settings, LogIn, LogOut, FolderHeart, ChevronDown, ChevronRight, Sun, Moon } from 'lucide-react'
 import { cn, getHighResPic } from '@/lib/utils'
 import { Separator } from '@/components/ui/separator'
+import { Icon } from '@/components/ui/icon'
 import { useUserStore } from '@/store/userStore'
 import { useThemeStore } from '@/store/themeStore'
 import { useI18nStore } from '@/i18n'
-import { motion, AnimatePresence } from 'framer-motion'
 
 type View = 'search' | 'playlist' | 'settings' | 'favorites'
 
@@ -18,11 +17,28 @@ interface SidebarProps {
 
 const topNavViews: View[] = ['search', 'playlist']
 
-const viewIcon: Record<View, React.ElementType> = {
-  search: Search,
-  playlist: ListMusic,
-  settings: Settings,
-  favorites: FolderHeart
+const viewIcon: Record<View, string> = {
+  search: 'search',
+  playlist: 'queue_music',
+  settings: 'settings',
+  favorites: 'folder_special'
+}
+
+function NavItem({ active, icon, label, onClick }: { active: boolean; icon: string; label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'w-full flex items-center gap-3 px-3 py-2 rounded-[8px] text-[14px] font-medium transition-colors active:scale-[0.98]',
+        active
+          ? 'bg-accent text-foreground font-semibold'
+          : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+      )}
+    >
+      <Icon name={icon} size={18} />
+      {label}
+    </button>
+  )
 }
 
 export function Sidebar({ currentView, onViewChange, activeFavId, onFavSelect }: SidebarProps) {
@@ -48,9 +64,7 @@ export function Sidebar({ currentView, onViewChange, activeFavId, onFavSelect }:
     }
   }
 
-  const handleLogin = () => {
-    onViewChange('settings')
-  }
+  const handleLogin = () => onViewChange('settings')
 
   const handleLogout = () => {
     logout()
@@ -64,139 +78,144 @@ export function Sidebar({ currentView, onViewChange, activeFavId, onFavSelect }:
   }
 
   return (
-    <aside className="w-60 flex flex-col bg-white dark:bg-[#0a0a0a] border-r border-vercel-gray-100 dark:border-[#1f1f1f] flex-shrink-0">
-      <div className="px-5 pt-5 pb-4">
-        <h1 className="text-[20px] font-semibold tracking-[-0.96px] text-vercel-black dark:text-[#ededed]">
-          {t('app.name')}
-        </h1>
-        <p className="text-[12px] text-vercel-gray-500 dark:text-[#666666] mt-1 font-mono uppercase tracking-normal">
+    <aside className="w-60 flex flex-col gap-2.5 p-3 h-full flex-shrink-0 overflow-hidden">
+      {/* Card 1 — Branding */}
+      <div className="bg-card border border-border rounded-[14px] p-4 backdrop-blur-sm shadow flex-shrink-0">
+        <div className="flex items-center gap-2 mb-2">
+          {/* Theme-adaptive app icon — simplified icon.svg */}
+          <div className="w-8 h-8 rounded-[8px] flex items-center justify-center flex-shrink-0 overflow-hidden"
+            style={{ background: `oklch(0.68 0.16 var(--hue) / 0.12)` }}>
+            <svg width="18" height="18" viewBox="0 0 1024 1024" fill="var(--primary)">
+              <rect x="60" y="60" width="904" height="904" rx="196" fill="var(--primary)" opacity="0.3"/>
+              <path d="M 512,348 L 296,348 C 266,348 248,370 248,402 L 248,612 C 248,642 270,656 296,656 L 728,656 C 754,656 776,642 776,612 L 776,402 C 776,370 758,348 728,348 Z" fill="var(--primary)" opacity="0.85"/>
+              {/* Cat ears */}
+              <path d="M 296,350 L 240,176 L 388,332 Z" fill="var(--primary)" opacity="0.85"/>
+              <path d="M 728,350 L 784,176 L 636,332 Z" fill="var(--primary)" opacity="0.85"/>
+              {/* Wave */}
+              <rect x="444" y="460" width="16" height="24" rx="3" fill="var(--primary)" opacity="0.5"/>
+              <rect x="468" y="444" width="16" height="56" rx="3" fill="var(--primary)" opacity="0.5"/>
+              <rect x="492" y="428" width="16" height="88" rx="3" fill="var(--primary)" opacity="0.5"/>
+              <rect x="516" y="444" width="16" height="56" rx="3" fill="var(--primary)" opacity="0.5"/>
+              <rect x="540" y="460" width="16" height="24" rx="3" fill="var(--primary)" opacity="0.5"/>
+            </svg>
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-[15px] font-bold text-foreground leading-tight truncate">
+              {t('app.name')}
+            </h1>
+          </div>
+        </div>
+        <div className="bg-primary h-[3px] w-7 rounded-full mb-2" />
+        <p className="text-[11px] text-muted-foreground font-mono uppercase tracking-wide">
           {t('app.subtitle')}
         </p>
       </div>
 
-      <Separator className="dark:bg-[#1f1f1f]" />
+      {/* Card 2 — Navigation (fills space) */}
+      <div className="bg-card border border-border rounded-[14px] p-3 backdrop-blur-sm shadow flex flex-col gap-0.5 flex-1 overflow-y-auto min-h-0">
+        {topNavViews.map((view) => (
+          <NavItem
+            key={view}
+            active={currentView === view}
+            icon={viewIcon[view]}
+            label={navLabel[view]}
+            onClick={() => onViewChange(view)}
+          />
+        ))}
 
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {topNavViews.map((view) => {
-          const isActive = currentView === view
-          const Icon = viewIcon[view]
-          return (
-            <motion.button
-              key={view}
-              onClick={() => onViewChange(view)}
-              whileTap={{ scale: 0.98 }}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 rounded-md text-[14px] font-medium transition-colors',
-                isActive
-                  ? 'bg-vercel-gray-50 dark:bg-[#141414] text-vercel-black dark:text-[#ededed] font-semibold'
-                  : 'text-vercel-gray-600 dark:text-[#808080] hover:bg-vercel-gray-50 dark:hover:bg-[#141414] hover:text-vercel-black dark:hover:text-[#ededed]'
-              )}
-            >
-              <Icon className="w-4 h-4" />
-              {navLabel[view]}
-            </motion.button>
-          )
-        })}
-
+        {/* Favorites */}
         {loginStatus?.isLogin && favFolders.length > 0 && (
-          <div className="mt-4">
+          <div className="mt-1">
             <button
               onClick={() => setFavExpanded(!favExpanded)}
-              className="w-full flex items-center justify-between px-3 py-2 text-[12px] font-semibold text-vercel-gray-500 dark:text-[#666666] uppercase tracking-wide"
+              className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide"
             >
               <span className="flex items-center gap-2">
-                <FolderHeart className="w-3.5 h-3.5" />
+                <Icon name="folder_special" size={14} />
                 {t('nav.favorites')}
               </span>
-              {favExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              <span
+                className="material-symbols-rounded text-[18px] transition-transform duration-300"
+                style={{ transform: favExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+              >
+                expand_more
+              </span>
             </button>
-            <AnimatePresence>
-              {favExpanded && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  {favFolders.map((folder) => (
-                    <motion.button
-                      key={folder.id}
-                      onClick={() => onFavSelect(folder.id, folder.title)}
-                      whileTap={{ scale: 0.98 }}
-                      className={cn(
-                        'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-[13px] transition-colors min-w-0',
-                        activeFavId === folder.id && currentView === 'favorites'
-                          ? 'bg-vercel-gray-50 dark:bg-[#141414] text-vercel-black dark:text-[#ededed] font-medium'
-                          : 'text-vercel-gray-500 dark:text-[#666666] hover:bg-vercel-gray-50 dark:hover:bg-[#141414] hover:text-vercel-black dark:hover:text-[#ededed]'
-                      )}
-                    >
-                      <span className="truncate flex-1 min-w-0 text-left">{folder.title}</span>
-                      <span className="text-[10px] text-vercel-gray-400 dark:text-[#555555] flex-shrink-0">
-                        {folder.media_count}
-                      </span>
-                    </motion.button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div
+              className="overflow-hidden transition-[max-height] duration-300 ease-out"
+              style={{ maxHeight: favExpanded ? `${favFolders.length * 32 + 8}px` : '0px' }}
+            >
+              <div className="flex flex-col gap-0.5">
+                {favFolders.map((folder) => (
+                  <button
+                    key={folder.id}
+                    onClick={() => onFavSelect(folder.id, folder.title)}
+                    className={cn(
+                      'w-full flex items-center gap-2 px-3 py-1 rounded-[8px] text-[13px] transition-colors active:scale-[0.98] min-w-0',
+                      activeFavId === folder.id && currentView === 'favorites'
+                        ? 'bg-accent text-foreground font-medium'
+                        : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    )}
+                  >
+                    <span className="truncate flex-1 min-w-0 text-left">{folder.title}</span>
+                    <span className="text-[10px] text-muted-foreground/60 flex-shrink-0">
+                      {folder.media_count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
-      </nav>
+      </div>
 
-      <Separator className="dark:bg-[#1f1f1f]" />
+      {/* Card 3 — User & Settings */}
+      <div className="bg-card border border-border rounded-[14px] p-3 backdrop-blur-sm shadow flex flex-col gap-0.5">
+        <NavItem
+          active={currentView === 'settings'}
+          icon="settings"
+          label={t('nav.settings')}
+          onClick={() => onViewChange('settings')}
+        />
 
-      <div className="px-5 py-4 space-y-2">
+        {/* Theme toggle */}
+        <button
+          onClick={(e) => toggleDark(e)}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-[8px] text-[14px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors active:scale-[0.98]"
+        >
+          <Icon name={isDark ? 'light_mode' : 'dark_mode'} size={18} />
+          {isDark ? t('nav.lightMode') : t('nav.darkMode')}
+        </button>
+
+        <Separator />
+
+        {/* User section */}
         {loginStatus?.isLogin ? (
-          <div className="flex items-center gap-2 px-3 py-2">
+          <div className="flex items-center gap-2 px-2 py-1.5">
             {loginStatus.face ? (
-              <img src={getHighResPic(loginStatus.face)} alt="avatar" className="w-7 h-7 rounded-full" />
+              <img src={getHighResPic(loginStatus.face)} alt="avatar" className="w-7 h-7 rounded-full flex-shrink-0" />
             ) : (
-              <div className="w-7 h-7 rounded-full bg-vercel-gray-100 dark:bg-[#1f1f1f]" />
+              <div className="w-7 h-7 rounded-full bg-accent flex-shrink-0" />
             )}
-            <span className="text-[13px] text-vercel-black dark:text-[#ededed] truncate flex-1">{loginStatus.uname}</span>
+            <span className="text-[13px] text-foreground truncate flex-1">{loginStatus.uname}</span>
             <button
               onClick={handleLogout}
-              className="p-1.5 rounded-md hover:bg-vercel-gray-50 dark:hover:bg-[#141414] text-vercel-gray-400 dark:text-[#666666] hover:text-vercel-black dark:hover:text-[#ededed] transition-colors"
+              className="p-1 rounded-[8px] hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
               title={t('nav.logout')}
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <Icon name="logout" size={14} />
             </button>
           </div>
         ) : (
-          <motion.button
-            whileTap={{ scale: 0.98 }}
+          <button
             onClick={handleLogin}
             disabled={isLoadingLogin}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-[14px] font-medium text-vercel-gray-600 dark:text-[#808080] hover:bg-vercel-gray-50 dark:hover:bg-[#141414] hover:text-vercel-black dark:hover:text-[#ededed] transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-[8px] text-[14px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors active:scale-[0.98]"
           >
-            <LogIn className="w-4 h-4" />
+            <Icon name="login" size={18} />
             {isLoadingLogin ? '...' : t('nav.login')}
-          </motion.button>
+          </button>
         )}
-
-        <motion.button
-          whileTap={{ scale: 0.98 }}
-          onClick={() => onViewChange('settings')}
-          className={cn(
-            'w-full flex items-center gap-3 px-3 py-2 rounded-md text-[14px] font-medium transition-colors',
-            currentView === 'settings'
-              ? 'bg-vercel-gray-50 dark:bg-[#141414] text-vercel-black dark:text-[#ededed] font-semibold'
-              : 'text-vercel-gray-600 dark:text-[#808080] hover:bg-vercel-gray-50 dark:hover:bg-[#141414] hover:text-vercel-black dark:hover:text-[#ededed]'
-          )}
-        >
-          <Settings className="w-4 h-4" />
-          {t('nav.settings')}
-        </motion.button>
-
-        <motion.button
-          whileTap={{ scale: 0.98 }}
-          onClick={(e) => toggleDark(e)}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-[14px] font-medium text-vercel-gray-600 dark:text-[#808080] hover:bg-vercel-gray-50 dark:hover:bg-[#141414] hover:text-vercel-black dark:hover:text-[#ededed] transition-colors"
-        >
-          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          {isDark ? t('nav.lightMode') : t('nav.darkMode')}
-        </motion.button>
       </div>
     </aside>
   )

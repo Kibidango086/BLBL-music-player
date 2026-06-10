@@ -1,7 +1,7 @@
 {
   "name": "blbl-music-player",
-  "version": "1.0.3",
-  "description": "Bilibili as a music player - Electron app with Vercel design",
+  "version": "2.0.0",
+  "description": "Bilibili as a music player - Electron desktop app",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
@@ -36,6 +36,16 @@
     "vite-plugin-electron-renderer": "^0.14.0"
   },
   "dependencies": {
+    "@applemusic-like-lyrics/core": "^0.5.1",
+    "@applemusic-like-lyrics/react": "^0.5.1",
+    "@fontsource/noto-sans-sc": "^5.2.9",
+    "@pixi/app": "^7.4.3",
+    "@pixi/core": "^7.4.3",
+    "@pixi/display": "^7.4.3",
+    "@pixi/filter-blur": "^7.4.3",
+    "@pixi/filter-bulge-pinch": "^5.1.1",
+    "@pixi/filter-color-matrix": "^7.4.3",
+    "@pixi/sprite": "^7.4.3",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-dropdown-menu": "^2.0.6",
     "@radix-ui/react-scroll-area": "^1.0.5",
@@ -47,9 +57,9 @@
     "@tanstack/react-virtual": "^3.13.24",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
-    "framer-motion": "^12.38.0",
-    "geist": "^1.3.0",
-    "lucide-react": "^0.363.0",
+    "jss": "^10.10.0",
+    "jss-preset-default": "^10.10.0",
+    "material-symbols": "^0.44.12",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tailwind-merge": "^2.2.0",
@@ -68,7 +78,8 @@
     "mac": {
       "target": [
         "dmg"
-      ]
+      ],
+      "icon": "public/icon.png"
     },
     "win": {
       "target": [
@@ -79,7 +90,8 @@
             "ia32"
           ]
         }
-      ]
+      ],
+      "icon": "public/icon.png"
     },
     "linux": {
       "target": [
@@ -87,7 +99,7 @@
         "deb",
         "rpm"
       ],
-      "icon": "icon.svg",
+      "icon": "public/icon.png",
       "category": "AudioVideo",
       "maintainer": "OpenCode"
     }

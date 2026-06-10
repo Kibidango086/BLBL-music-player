@@ -11,7 +11,8 @@ import {
   getFavFolderContent,
   createFavFolder,
   addVideosToFavFolder,
-  getLoginStatus
+  getLoginStatus,
+  getVideoSubtitles
 } from './bilibili'
 
 let mainWindow: BrowserWindow | null = null
@@ -85,6 +86,10 @@ ipcMain.handle('bili-popular', async () => {
   return []
 })
 
+ipcMain.handle('bili-subtitles', async (_event, bvid: string, cid: number) => {
+  return await getVideoSubtitles(bvid, cid)
+})
+
 ipcMain.handle('bili-login-status', async () => {
   return await getLoginStatus()
 })
@@ -110,19 +115,30 @@ ipcMain.handle('bili-set-cookies', async (_event, cookies: { name: string; value
     const oneYearLater = Date.now() / 1000 + 365 * 24 * 60 * 60
     for (const cookie of cookies) {
       if (!cookie.value) continue
-      const cookieOpts = {
-        url: 'https://www.bilibili.com',
+      // Set on multiple domains to ensure coverage
+      for (const domain of ['.bilibili.com', 'bilibili.com']) {
+        await session.defaultSession.cookies.set({
+          url: `https://${domain}`,
+          name: cookie.name,
+          value: cookie.value,
+          domain,
+          path: '/',
+          secure: true,
+          sameSite: 'no_restriction' as const,
+          expirationDate: oneYearLater
+        })
+      }
+      // Also set on api subdomain explicitly
+      await session.defaultSession.cookies.set({
+        url: 'https://api.bilibili.com',
         name: cookie.name,
         value: cookie.value,
         domain: '.bilibili.com',
         path: '/',
-        httpOnly: cookie.name === 'SESSDATA',
         secure: true,
         sameSite: 'no_restriction' as const,
         expirationDate: oneYearLater
-      }
-      await session.defaultSession.cookies.set(cookieOpts)
-      await session.defaultSession.cookies.set({ ...cookieOpts, url: 'https://api.bilibili.com' })
+      })
     }
     const status = await getLoginStatus()
     return { success: status.isLogin, status }

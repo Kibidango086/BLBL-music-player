@@ -6,13 +6,12 @@ import { useToastStore } from '@/store/toastStore'
 import { useI18nStore } from '@/i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { LogIn, LogOut, User, Trash2, Cookie, Globe, AlertCircle, CheckCircle, Sun, Moon } from 'lucide-react'
+import { Icon } from '@/components/ui/icon'
 import { getHighResPic } from '@/lib/utils'
-import { motion, AnimatePresence } from 'framer-motion'
 
 export function SettingsView() {
   const { loginStatus, setLoginStatus, setFavFolders, logout, isLoadingLogin, setLoadingLogin } = useUserStore()
-  const { isDark, toggleDark } = useThemeStore()
+  const { isDark, toggleDark, accentHue, setAccentHue } = useThemeStore()
   const { proxyRules, setProxyRules, proxyUsername, setProxyCredentials, proxyPassword } = useProxyStore()
   const { showToast } = useToastStore()
   const { locale, setLocale, t } = useI18nStore()
@@ -81,58 +80,102 @@ export function SettingsView() {
 
   return (
     <div className="flex flex-col h-full">
-      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="px-8 pt-8 pb-6">
-        <h2 className="text-[32px] font-semibold tracking-[-1.28px] text-vercel-black dark:text-[#ededed]">
+      <div className="px-8 pt-8 pb-6" style={{ animation: 'fadeInDown 0.35s ease-out' }}>
+        <h2 className="text-[32px] font-bold tracking-[-0.02em] text-foreground">
           {t('settings.title')}
         </h2>
-      </motion.div>
+      </div>
 
       <div className="px-8 pb-8 space-y-6 max-w-xl">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.05 }} className="p-5 rounded-lg bg-white dark:bg-[#0a0a0a] shadow-border">
-          <h3 className="text-[16px] font-semibold text-vercel-black dark:text-[#ededed] tracking-[-0.32px]">
+        {/* Appearance */}
+        <div className="p-5 rounded-xl bg-card border border-border shadow">
+          <h3 className="text-[16px] font-bold text-foreground tracking-[-0.02em]">
             {t('settings.appearance')}
           </h3>
-          <div className="mt-4 flex items-center justify-between">
-            <span className="text-[14px] text-vercel-gray-600 dark:text-[#808080]">
-              {t('settings.themeLabel', { mode: themeLabel })}
-            </span>
-            <Button variant="outline" size="sm" onClick={(e) => toggleDark(e)}>
-              {isDark ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
-              {t('settings.themeSwitch')}
-            </Button>
-          </div>
-        </motion.div>
+          <div className="mt-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[14px] text-muted-foreground">
+                {t('settings.themeLabel', { mode: themeLabel })}
+              </span>
+              <Button variant="outline" size="sm" onClick={(e) => toggleDark(e)}>
+                <Icon name={isDark ? 'light_mode' : 'dark_mode'} size={16} />
+                <span className="ml-2">{t('settings.themeSwitch')}</span>
+              </Button>
+            </div>
 
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.08 }} className="p-5 rounded-lg bg-white dark:bg-[#0a0a0a] shadow-border">
-          <h3 className="text-[16px] font-semibold text-vercel-black dark:text-[#ededed] tracking-[-0.32px]">
+            {/* Accent Hue Selector */}
+            <div className="flex items-center justify-between">
+              <span className="text-[14px] text-muted-foreground">主题色</span>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="0"
+                  max="360"
+                  value={accentHue}
+                  onChange={(e) => setAccentHue(Number(e.target.value))}
+                  className="w-28 h-2 rounded-full appearance-none cursor-pointer"
+                  style={{
+                    background: `linear-gradient(to right, 
+                      hsl(0, 80%, 60%), hsl(60, 80%, 60%), hsl(120, 80%, 60%), 
+                      hsl(180, 80%, 60%), hsl(240, 80%, 60%), hsl(300, 80%, 60%), 
+                      hsl(360, 80%, 60%))`
+                  }}
+                />
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    max="360"
+                    value={accentHue}
+                    onChange={(e) => {
+                      const v = Number(e.target.value)
+                      if (!isNaN(v) && v >= 0 && v <= 360) setAccentHue(v)
+                    }}
+                    className="w-14 h-7 text-center text-[13px] rounded-lg border border-input bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <span className="text-[13px] text-muted-foreground">°</span>
+                </div>
+                <div
+                  className="w-6 h-6 rounded-full border-2 border-border flex-shrink-0"
+                  style={{ backgroundColor: `oklch(0.68 0.16 ${accentHue})` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Language */}
+        <div className="p-5 rounded-xl bg-card border border-border shadow">
+          <h3 className="text-[16px] font-bold text-foreground tracking-[-0.02em]">
             {t('settings.language')}
           </h3>
           <div className="mt-4 flex items-center gap-2">
             <button
               onClick={() => setLocale('zh-CN')}
-              className={`px-3 py-1.5 rounded-md text-[13px] transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-[13px] transition-colors ${
                 locale === 'zh-CN'
-                  ? 'bg-vercel-gray-50 dark:bg-[#141414] text-vercel-black dark:text-[#ededed] font-medium shadow-border'
-                  : 'text-vercel-gray-500 dark:text-[#808080] hover:bg-vercel-gray-50 dark:hover:bg-[#141414]'
+                  ? 'bg-secondary text-foreground font-medium border border-border'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
               }`}
             >
               {t('settings.langZhCN')}
             </button>
             <button
               onClick={() => setLocale('zh-TW')}
-              className={`px-3 py-1.5 rounded-md text-[13px] transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-[13px] transition-colors ${
                 locale === 'zh-TW'
-                  ? 'bg-vercel-gray-50 dark:bg-[#141414] text-vercel-black dark:text-[#ededed] font-medium shadow-border'
-                  : 'text-vercel-gray-500 dark:text-[#808080] hover:bg-vercel-gray-50 dark:hover:bg-[#141414]'
+                  ? 'bg-secondary text-foreground font-medium border border-border'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
               }`}
             >
               {t('settings.langZhTW')}
             </button>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }} className="p-5 rounded-lg bg-white dark:bg-[#0a0a0a] shadow-border">
-          <h3 className="text-[16px] font-semibold text-vercel-black dark:text-[#ededed] tracking-[-0.32px]">
+        {/* Account */}
+        <div className="p-5 rounded-xl bg-card border border-border shadow">
+          <h3 className="text-[16px] font-bold text-foreground tracking-[-0.02em]">
             {t('settings.account')}
           </h3>
           {loginStatus?.isLogin ? (
@@ -140,92 +183,91 @@ export function SettingsView() {
               {loginStatus.face ? (
                 <img src={getHighResPic(loginStatus.face)} alt="avatar" className="w-10 h-10 rounded-full" />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-vercel-gray-100 dark:bg-[#1f1f1f] flex items-center justify-center">
-                  <User className="w-5 h-5 text-vercel-gray-400 dark:text-[#666666]" />
+                <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
+                  <Icon name="person" size={20} className="text-muted-foreground" />
                 </div>
               )}
               <div className="flex-1">
-                <p className="text-[14px] font-medium text-vercel-black dark:text-[#ededed]">{loginStatus.uname}</p>
-                <p className="text-[12px] text-vercel-gray-500 dark:text-[#808080]">UID: {loginStatus.mid}</p>
+                <p className="text-[14px] font-medium text-foreground">{loginStatus.uname}</p>
+                <p className="text-[12px] text-muted-foreground">UID: {loginStatus.mid}</p>
               </div>
               <Button variant="outline" size="sm" onClick={handleLogout}>
-                <LogOut className="w-3.5 h-3.5 mr-2" />
-                {t('nav.logout')}
+                <Icon name="logout" size={14} />
+                <span className="ml-2">{t('nav.logout')}</span>
               </Button>
             </div>
           ) : (
             <div className="mt-4 space-y-4">
               {!cookieMode ? (
                 <div className="space-y-3">
-                  <p className="text-[13px] text-vercel-gray-500 dark:text-[#808080]">{t('settings.loginHint')}</p>
+                  <p className="text-[13px] text-muted-foreground">{t('settings.loginHint')}</p>
                   <div className="flex gap-3">
                     <Button onClick={handleLoginWindow} disabled={isLoadingLogin}>
-                      <Globe className="w-4 h-4 mr-2" />
-                      {isLoadingLogin ? '...' : t('settings.windowLogin')}
+                      <Icon name="language" size={16} />
+                      <span className="ml-2">{isLoadingLogin ? '...' : t('settings.windowLogin')}</span>
                     </Button>
                     <Button variant="outline" onClick={() => setCookieMode(true)}>
-                      <Cookie className="w-4 h-4 mr-2" />
-                      {t('settings.cookieLogin')}
+                      <Icon name="cookie" size={16} />
+                      <span className="ml-2">{t('settings.cookieLogin')}</span>
                     </Button>
                   </div>
                 </div>
               ) : (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="space-y-3">
+                <div className="space-y-3" style={{ animation: 'fadeInDown 0.2s ease-out' }}>
                   <div className="space-y-2">
-                    <p className="text-[13px] text-vercel-gray-500 dark:text-[#808080]">{t('settings.cookieGuide')}</p>
+                    <p className="text-[13px] text-muted-foreground">{t('settings.cookieGuide')}</p>
                     <div className="space-y-2">
-                      <Input placeholder={t('settings.sessdata')} value={sessdata} onChange={(e) => setSessdata(e.target.value)} className="text-[13px] dark:bg-[#141414] dark:text-[#ededed]" />
-                      <Input placeholder={t('settings.biliJct')} value={biliJct} onChange={(e) => setBiliJct(e.target.value)} className="text-[13px] dark:bg-[#141414] dark:text-[#ededed]" />
+                      <Input placeholder={t('settings.sessdata')} value={sessdata} onChange={(e) => setSessdata(e.target.value)} className="text-[13px]" />
+                      <Input placeholder={t('settings.biliJct')} value={biliJct} onChange={(e) => setBiliJct(e.target.value)} className="text-[13px]" />
                     </div>
                   </div>
-                  <AnimatePresence>
-                    {cookieResult && (
-                      <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={`flex items-center gap-2 text-[13px] ${cookieResult.success ? 'text-green-600' : 'text-red-500'}`}>
-                        {cookieResult.success ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                        {cookieResult.message}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {cookieResult && (
+                    <div className={`flex items-center gap-2 text-[13px] ${cookieResult.success ? 'text-green-600' : 'text-red-500'}`}>
+                      <Icon name={cookieResult.success ? 'check_circle' : 'error'} size={16} />
+                      {cookieResult.message}
+                    </div>
+                  )}
                   <div className="flex gap-3">
                     <Button onClick={handleCookieLogin} disabled={isLoadingLogin || !sessdata.trim()}>
-                      <LogIn className="w-4 h-4 mr-2" />
-                      {isLoadingLogin ? t('settings.verifying') : t('settings.confirmLogin')}
+                      <Icon name="login" size={16} />
+                      <span className="ml-2">{isLoadingLogin ? t('settings.verifying') : t('settings.confirmLogin')}</span>
                     </Button>
                     <Button variant="ghost" onClick={() => { setCookieMode(false); setCookieResult(null); setSessdata(''); setBiliJct('') }}>
                       {t('settings.cancel')}
                     </Button>
                   </div>
-                </motion.div>
+                </div>
               )}
             </div>
           )}
-        </motion.div>
+        </div>
 
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.15 }} className="p-5 rounded-lg bg-white dark:bg-[#0a0a0a] shadow-border">
-          <h3 className="text-[16px] font-semibold text-vercel-black dark:text-[#ededed] tracking-[-0.32px]">
+        {/* Proxy */}
+        <div className="p-5 rounded-xl bg-card border border-border shadow">
+          <h3 className="text-[16px] font-bold text-foreground tracking-[-0.02em]">
             {t('settings.proxy')}
           </h3>
-          <p className="text-[13px] text-vercel-gray-500 dark:text-[#808080] mt-1">{t('settings.proxyDesc')}</p>
+          <p className="text-[13px] text-muted-foreground mt-1">{t('settings.proxyDesc')}</p>
           <div className="mt-4 space-y-2">
             <Input
               placeholder={t('settings.proxyPlaceholder')}
               value={proxyRules}
               onChange={(e) => setProxyRules(e.target.value)}
-              className="text-[13px] dark:bg-[#141414] dark:text-[#ededed]"
+              className="text-[13px]"
             />
             <div className="flex gap-2">
               <Input
                 placeholder={t('settings.proxyUser')}
                 value={proxyUsername}
                 onChange={(e) => setProxyCredentials(e.target.value, proxyPassword)}
-                className="flex-1 text-[13px] dark:bg-[#141414] dark:text-[#ededed]"
+                className="flex-1 text-[13px]"
               />
               <Input
                 type="password"
                 placeholder={t('settings.proxyPass')}
                 value={proxyPassword}
                 onChange={(e) => setProxyCredentials(proxyUsername, e.target.value)}
-                className="flex-1 text-[13px] dark:bg-[#141414] dark:text-[#ededed]"
+                className="flex-1 text-[13px]"
               />
             </div>
           </div>
@@ -234,44 +276,48 @@ export function SettingsView() {
               {t('settings.proxyClear')}
             </Button>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.2 }} className="p-5 rounded-lg bg-white dark:bg-[#0a0a0a] shadow-border">
-          <h3 className="text-[16px] font-semibold text-vercel-black dark:text-[#ededed] tracking-[-0.32px]">
+        {/* Data Management */}
+        <div className="p-5 rounded-xl bg-card border border-border shadow">
+          <h3 className="text-[16px] font-bold text-foreground tracking-[-0.02em]">
             {t('settings.dataManagement')}
           </h3>
-          <p className="text-[13px] text-vercel-gray-500 dark:text-[#808080] mt-1">{t('settings.clearDesc')}</p>
+          <p className="text-[13px] text-muted-foreground mt-1">{t('settings.clearDesc')}</p>
           <Button variant="outline" size="sm" className="mt-4" onClick={() => {
-            const storageKeys = ['blbl-player-storage', 'blbl-proxy-storage', 'blbl-theme-storage', 'blbl-locale-storage', 'blbl-user-storage', 'blbl-user-storage']
-            storageKeys.forEach(key => localStorage.removeItem(key))
             logout()
-            showToast('所有数据已清除', 'info')
-            setTimeout(() => window.location.reload(), 600)
+            // Clear after state flush so zustand persist doesn't re-write
+            setTimeout(() => {
+              ['blbl-player-storage', 'blbl-proxy-storage', 'blbl-theme-storage', 'blbl-locale-storage', 'blbl-user-storage']
+                .forEach(key => localStorage.removeItem(key))
+              window.location.reload()
+            }, 50)
           }}>
-            <Trash2 className="w-3.5 h-3.5 mr-2" />
-            {t('settings.clearAll')}
+            <Icon name="delete" size={14} />
+            <span className="ml-2">{t('settings.clearAll')}</span>
           </Button>
-        </motion.div>
+        </div>
 
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.3 }} className="p-5 rounded-lg bg-white dark:bg-[#0a0a0a] shadow-border">
-          <h3 className="text-[16px] font-semibold text-vercel-black dark:text-[#ededed] tracking-[-0.32px]">
+        {/* About */}
+        <div className="p-5 rounded-xl bg-card border border-border shadow">
+          <h3 className="text-[16px] font-bold text-foreground tracking-[-0.02em]">
             {t('settings.about')}
           </h3>
-          <p className="text-[13px] text-vercel-gray-500 dark:text-[#808080] mt-1">{t('settings.version')}</p>
-          <p className="text-[12px] text-vercel-gray-400 dark:text-[#666666] mt-2">{t('settings.techStack')}</p>
-          <p className="text-[12px] text-vercel-gray-400 dark:text-[#666666] mt-1">{t('settings.design')}</p>
-        </motion.div>
+          <p className="text-[13px] text-muted-foreground mt-1">{t('settings.version')}</p>
+          <p className="text-[12px] text-muted-foreground mt-2">{t('settings.techStack')}</p>
+        </div>
 
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.35 }} className="p-5 rounded-lg bg-white dark:bg-[#0a0a0a] shadow-border">
-          <h3 className="text-[16px] font-semibold text-vercel-black dark:text-[#ededed] tracking-[-0.32px]">
+        {/* Disclaimer */}
+        <div className="p-5 rounded-xl bg-card border border-border shadow">
+          <h3 className="text-[16px] font-bold text-foreground tracking-[-0.02em]">
             声明
           </h3>
-          <p className="text-[12px] text-vercel-gray-500 dark:text-[#808080] mt-2 leading-relaxed">
+          <p className="text-[12px] text-muted-foreground mt-2 leading-relaxed">
             @Kibidango086<br />
             使用本软件与作者无关。<br />
             平台内容归属 Bilibili 公司所有。
           </p>
-        </motion.div>
+        </div>
       </div>
     </div>
   )

@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ArrowLeft, ListPlus, ListRestart, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { VideoCard } from '@/components/ui/video-card'
+import { Icon } from '@/components/ui/icon'
 import { getHighResPic } from '@/lib/utils'
 import { usePlayerStore } from '@/store/playerStore'
 import { useUserStore } from '@/store/userStore'
@@ -46,7 +46,7 @@ export function FavoritesView({ mediaId, folderName, onBack, onPlay, onAddToPlay
     } finally {
       setLoading(false)
     }
-  }, [mediaId, t, videos.length])
+  }, [mediaId, t])
 
   useEffect(() => {
     loadContent(1)
@@ -105,28 +105,28 @@ export function FavoritesView({ mediaId, folderName, onBack, onPlay, onAddToPlay
   return (
     <div className="flex flex-col h-full">
       <div className="px-8 pt-8 pb-6 flex items-center gap-4 min-w-0">
-        <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8 dark:text-[#ededed] dark:hover:bg-[#141414] flex-shrink-0">
-          <ArrowLeft className="w-4 h-4" />
+        <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8 flex-shrink-0">
+          <Icon name="arrow_back" size={16} />
         </Button>
         <div className="flex-1 min-w-0">
-          <h2 className="text-[32px] font-semibold tracking-[-1.28px] text-vercel-black dark:text-[#ededed] truncate">
+          <h2 className="text-[32px] font-bold tracking-[-0.02em] text-foreground truncate">
             {folderName}
           </h2>
-          <p className="text-[13px] text-vercel-gray-500 dark:text-[#808080] mt-1">{t('fav.videosCount', { count: videos.length })}</p>
+          <p className="text-[13px] text-muted-foreground mt-1">{t('fav.videosCount', { count: videos.length })}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <Button variant="ghost" size="icon" onClick={handleOpenFolderInBrowser} className="h-8 w-8 dark:text-[#ededed] dark:hover:bg-[#141414]" title={t('fav.openBrowser')}>
-            <ExternalLink className="w-4 h-4" />
+          <Button variant="ghost" size="icon" onClick={handleOpenFolderInBrowser} className="h-8 w-8" title={t('fav.openBrowser')}>
+            <Icon name="open_in_new" size={16} />
           </Button>
           {videos.length > 0 && (
             <>
               <Button variant="outline" size="sm" onClick={handleAddAll}>
-                <ListPlus className="w-3.5 h-3.5 mr-2" />
-                {t('fav.addAll')}
+                <Icon name="playlist_add" size={14} />
+                <span className="ml-2">{t('fav.addAll')}</span>
               </Button>
               <Button variant="outline" size="sm" onClick={handleReplacePlaylist}>
-                <ListRestart className="w-3.5 h-3.5 mr-2" />
-                {t('fav.replaceList')}
+                <Icon name="replay" size={14} />
+                <span className="ml-2">{t('fav.replaceList')}</span>
               </Button>
             </>
           )}
@@ -165,10 +165,17 @@ export function FavoritesView({ mediaId, folderName, onBack, onPlay, onAddToPlay
           </div>
         )}
 
-        {hasMore && (
+        {loading && (
+          <div className="flex items-center gap-2 text-[13px] text-muted-foreground py-4">
+            <Icon name="progress_activity" size={16} className="animate-spin text-primary" />
+            {t('fav.loading')}
+          </div>
+        )}
+
+        {hasMore && !loading && (
           <div className="mt-4 flex justify-center">
-            <Button variant="outline" onClick={handleLoadMore} disabled={loading}>
-              {loading ? t('fav.loading') : t('fav.loadMore')}
+            <Button variant="outline" onClick={handleLoadMore}>
+              {t('fav.loadMore')}
             </Button>
           </div>
         )}

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Search } from 'lucide-react'
+import { Icon } from '@/components/ui/icon'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -9,7 +9,6 @@ import { getHighResPic } from '@/lib/utils'
 import { useI18nStore } from '@/i18n'
 import { useToastStore } from '@/store/toastStore'
 import type { BilibiliVideo, PlaylistItem } from '@/types'
-import { motion } from 'framer-motion'
 
 interface SearchViewProps {
   onPlay: (video: PlaylistItem) => void
@@ -51,13 +50,11 @@ export function SearchView({ onPlay, onAddToPlaylist }: SearchViewProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
+      <div
         className="px-8 pt-8 pb-6 min-w-0"
+        style={{ animation: 'fadeInDown 0.35s ease-out' }}
       >
-        <h2 className="text-[32px] font-semibold tracking-[-1.28px] text-vercel-black dark:text-[#ededed] mb-6 truncate">
+        <h2 className="text-[32px] font-bold tracking-[-0.02em] text-foreground mb-6 truncate">
           {t('search.title')}
         </h2>
         <div className="flex gap-3 max-w-xl">
@@ -66,23 +63,19 @@ export function SearchView({ onPlay, onAddToPlaylist }: SearchViewProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 h-10 text-[14px] dark:bg-[#141414] dark:text-[#ededed] dark:shadow-[rgba(255,255,255,0.08)_0px_0px_0px_1px]"
+            className="flex-1 h-10 text-[14px]"
           />
           <Button onClick={performSearch} disabled={loading} className="h-10 px-5">
-            <Search className="w-4 h-4 mr-2" />
-            {t('search.btn')}
+            <Icon name="search" size={16} />
+            <span className="ml-2">{t('search.btn')}</span>
           </Button>
         </div>
-      </motion.div>
+      </div>
 
       <ScrollArea className="flex-1 px-8 pb-8">
         {loading && (
-          <div className="flex items-center gap-2 text-[14px] text-vercel-gray-500 dark:text-[#666666] py-4">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              className="w-4 h-4 border-2 border-vercel-gray-200 dark:border-[#333333] border-t-vercel-black dark:border-t-[#ededed] rounded-full"
-            />
+          <div className="flex items-center gap-2 text-[14px] text-muted-foreground py-4">
+            <Icon name="progress_activity" size={16} className="animate-spin text-primary" />
             {t('search.loading')}
           </div>
         )}

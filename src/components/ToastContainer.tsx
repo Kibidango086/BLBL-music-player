@@ -1,42 +1,44 @@
+import { useEffect, useState } from 'react'
+import { Icon } from '@/components/ui/icon'
 import { useToastStore } from '@/store/toastStore'
-import { CheckCircle, AlertCircle, Info } from 'lucide-react'
-import { AnimatePresence, motion } from 'framer-motion'
 
-const iconMap = {
-  success: CheckCircle,
-  error: AlertCircle,
-  info: Info
+const iconMap: Record<string, string> = {
+  success: 'check_circle',
+  error: 'error',
+  info: 'info'
 }
 
-const colorMap = {
+const colorMap: Record<string, string> = {
   success: 'text-green-600 dark:text-green-400',
   error: 'text-red-500 dark:text-red-400',
-  info: 'text-vercel-blue dark:text-blue-400'
+  info: 'text-primary'
 }
 
 export function ToastContainer() {
   const { toasts } = useToastStore()
+  const [visibleToasts, setVisibleToasts] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    const next: Record<string, boolean> = {}
+    toasts.forEach(t => { next[t.id] = true })
+    setVisibleToasts(next)
+  }, [toasts])
 
   return (
     <div className="fixed top-12 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
-      <AnimatePresence>
-        {toasts.map((toast) => {
-          const Icon = iconMap[toast.type]
-          return (
-            <motion.div
-              key={toast.id}
-              initial={{ opacity: 0, x: 24, scale: 0.95 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 24, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white dark:bg-[#141414] shadow-card text-[13px] font-medium text-vercel-black dark:text-[#ededed]"
-            >
-              <Icon className={`w-4 h-4 ${colorMap[toast.type]}`} />
-              {toast.message}
-            </motion.div>
-          )
-        })}
-      </AnimatePresence>
+      {toasts.map((toast) => (
+        <div
+          key={toast.id}
+          className="pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card border border-border shadow text-[13px] font-medium text-foreground backdrop-blur-xl"
+          style={{
+            animation: 'toastBounce 0.5s cubic-bezier(.34,1.56,.64,1) forwards',
+            opacity: visibleToasts[toast.id] ? 1 : 0
+          }}
+        >
+          <Icon name={iconMap[toast.type] || 'info'} size={16} className={colorMap[toast.type] || ''} />
+          {toast.message}
+        </div>
+      ))}
     </div>
   )
 }

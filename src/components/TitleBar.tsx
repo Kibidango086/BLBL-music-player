@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Minus, Square, X } from 'lucide-react'
+import { Icon } from '@/components/ui/icon'
 import { useI18nStore } from '@/i18n'
 
 export function TitleBar() {
@@ -14,13 +14,13 @@ export function TitleBar() {
 
   return (
     <div
-      className="h-9 flex items-center justify-between flex-shrink-0 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur border-b border-vercel-gray-100 dark:border-[#1f1f1f] z-50 select-none"
+      className="h-9 flex items-center justify-between flex-shrink-0 bg-card backdrop-blur-[12px] border-b border-border z-50 select-none"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
       {isMac ? (
         <>
           <div className="w-[80px] flex-shrink-0" />
-          <span className="text-[13px] font-medium text-vercel-gray-600 dark:text-[#808080]">
+          <span className="text-[13px] font-medium text-muted-foreground">
             {t('app.name')}
           </span>
           <div className="w-[80px] flex-shrink-0" />
@@ -28,31 +28,36 @@ export function TitleBar() {
       ) : (
         <>
           <div className="flex items-center gap-2 px-4">
-            <span className="text-[13px] font-medium text-vercel-gray-900 dark:text-[#ededed]">
+            {/* Theme-adaptive app icon — simplified icon.svg */}
+            <svg width="18" height="18" viewBox="0 0 1024 1024" fill="var(--primary)" opacity="0.85">
+              <rect x="60" y="60" width="904" height="904" rx="196" fill="var(--primary)" opacity="0.25"/>
+              <path d="M 296,348 C 266,348 248,370 248,402 L 248,612 C 248,642 270,656 296,656 L 728,656 C 754,656 776,642 776,612 L 776,402 C 776,370 758,348 728,348 Z M 296,350 L 240,176 L 388,332 Z M 728,350 L 784,176 L 636,332 Z"/>
+            </svg>
+            <span className="text-[13px] font-medium text-foreground">
               {t('app.name')}
             </span>
           </div>
           <div className="flex items-center h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
             <button
               onClick={() => window.electronAPI.minimize()}
-              className="h-full px-4 flex items-center justify-center text-vercel-gray-500 dark:text-[#808080] hover:bg-vercel-gray-100 dark:hover:bg-[#1f1f1f] transition-colors"
+              className="h-full px-4 flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
               title="Minimize"
             >
-              <Minus className="w-3.5 h-3.5" />
+              <Icon name="horizontal_rule" size={14} />
             </button>
             <button
               onClick={() => window.electronAPI.maximize()}
-              className="h-full px-4 flex items-center justify-center text-vercel-gray-500 dark:text-[#808080] hover:bg-vercel-gray-100 dark:hover:bg-[#1f1f1f] transition-colors"
+              className="h-full px-4 flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
               title="Maximize"
             >
-              <Square className="w-3 h-3" />
+              <Icon name="check_box_outline_blank" size={12} />
             </button>
             <button
               onClick={() => window.electronAPI.close()}
-              className="h-full px-4 flex items-center justify-center text-vercel-gray-500 dark:text-[#808080] hover:bg-red-500 hover:text-white dark:hover:bg-red-500 dark:hover:text-white transition-colors"
+              className="h-full px-4 flex items-center justify-center text-muted-foreground hover:bg-destructive hover:text-destructive-fg transition-colors"
               title="Close"
             >
-              <X className="w-3.5 h-3.5" />
+              <Icon name="close" size={14} />
             </button>
           </div>
         </>

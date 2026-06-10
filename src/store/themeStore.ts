@@ -16,10 +16,24 @@ function getInitialDark(): boolean {
   return false
 }
 
+function getInitialAccentHue(): number {
+  if (typeof window === 'undefined') return 345
+  try {
+    const saved = localStorage.getItem('blbl-theme-storage')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (typeof parsed.state?.accentHue === 'number') return parsed.state.accentHue
+    }
+  } catch {}
+  return 345
+}
+
 interface ThemeStore {
   isDark: boolean
+  accentHue: number
   toggleDark: (e?: React.MouseEvent) => void
   setDark: (dark: boolean, origin?: { x: number; y: number }) => void
+  setAccentHue: (hue: number) => void
 }
 
 function syncDOM(dark: boolean) {
@@ -33,10 +47,34 @@ function setVTCursor(x: number, y: number) {
   root.style.setProperty('--vt-origin-y', `${y}px`)
 }
 
+function injectAccentCSS(hue: number) {
+  let el = document.getElementById('accent-css') as HTMLStyleElement | null
+  if (!el) {
+    el = document.createElement('style')
+    el.id = 'accent-css'
+    document.head.appendChild(el)
+  }
+  el.textContent = `
+:root {
+  --hue: ${hue};
+  --primary:    oklch(0.68 0.16 var(--hue));
+  --primary-fg: oklch(0.99 0 0);
+  --ring:       oklch(0.6 0.16 var(--hue));
+  --blob:       oklch(0.65 0.16 var(--hue) / 0.3);
+}
+.dark {
+  --primary:    oklch(0.72 0.14 var(--hue));
+  --ring:       oklch(0.65 0.14 var(--hue));
+  --blob:       oklch(0.6 0.14 var(--hue) / 0.25);
+}
+`
+}
+
 export const useThemeStore = create<ThemeStore>()(
   persist(
     (set, get) => ({
       isDark: getInitialDark(),
+      accentHue: getInitialAccentHue(),
       toggleDark: (e) => {
         const origin = e ? { x: e.clientX, y: e.clientY } : undefined
         get().setDark(!get().isDark, origin)
@@ -46,6 +84,8 @@ export const useThemeStore = create<ThemeStore>()(
         const update = () => {
           set({ isDark: dark })
           syncDOM(dark)
+          // Re-inject accent CSS to ensure correct vars for new theme
+          injectAccentCSS(get().accentHue)
         }
         if (typeof document !== 'undefined' && 'startViewTransition' in document) {
           const doc = document as any
@@ -56,6 +96,10 @@ export const useThemeStore = create<ThemeStore>()(
         } else {
           update()
         }
+      },
+      setAccentHue: (hue) => {
+        set({ accentHue: hue })
+        injectAccentCSS(hue)
       }
     }),
     { name: 'blbl-theme-storage' }

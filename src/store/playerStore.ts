@@ -23,6 +23,7 @@ interface PlayerStore {
   setMuted: (muted: boolean) => void
   setPlaybackRate: (rate: number) => void
   setCurrentTrack: (track: PlaylistItem | null) => void
+  updateCurrentTrackCid: (cid: number) => void
   addToPlaylist: (track: PlaylistItem) => void
   setPlaylist: (playlist: PlaylistItem[]) => void
   removeFromPlaylist: (bvid: string) => void
@@ -57,6 +58,10 @@ export const usePlayerStore = create<PlayerStore>()(
       setMuted: (muted) => set({ muted }),
       setPlaybackRate: (rate) => set({ playbackRate: rate }),
       setCurrentTrack: (track) => set({ currentTrack: track, currentTime: 0, isPlaying: !!track }),
+      updateCurrentTrackCid: (cid) => set((state) => {
+        if (!state.currentTrack || state.currentTrack.cid) return state
+        return { currentTrack: { ...state.currentTrack, cid } }
+      }),
 
       addToPlaylist: (track) =>
         set((state) => {

@@ -90,5 +90,3 @@ bun run build
 - 平台内容归属 Bilibili 公司所有
 
 ---
-
-> 设计灵感来自 [Vercel](https://vercel.com/) / [Geist](https://vercel.com/font)
