@@ -28,8 +28,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('bili-create-fav', title, intro, privacy),
   biliAddToFav: (aidList: number[], mediaId: number) =>
     ipcRenderer.invoke('bili-add-to-fav', aidList, mediaId),
-  biliSubtitles: (bvid: string, cid: number) =>
-    ipcRenderer.invoke('bili-subtitles', bvid, cid),
+  biliSubtitles: (bvid: string, cid: number, title?: string) =>
+    ipcRenderer.invoke('bili-subtitles', bvid, cid, title),
 
   setProxy: (config: { rules: string; username?: string; password?: string }) =>
     ipcRenderer.invoke('set-proxy', config),

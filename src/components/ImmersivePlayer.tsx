@@ -1,290 +1,243 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { LyricPlayer } from '@applemusic-like-lyrics/react'
+import '@applemusic-like-lyrics/core/style.css'
 import { Icon } from '@/components/ui/icon'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
-import { getVideoSubtitles, type SubtitleItem } from '@/lib/bilibili-api'
+import { getVideoSubtitles } from '@/lib/bilibili-api'
 import { getHighResPic, stripHtml } from '@/lib/utils'
 import { formatDuration } from '@/lib/bilibili-api'
 import { useI18nStore } from '@/i18n'
 import { usePlayerStore } from '@/store/playerStore'
+import { usePersistedState } from '@/lib/usePersistedState'
 
-interface ImmersivePlayerProps {
-  onClose: () => void
-}
+interface ImmersivePlayerProps { onClose: () => void }
 
-function subtitlesToLyricLines(subs: SubtitleItem[]): any[] {
-  return subs
-    .filter(s => s.content?.trim())
-    .map(s => {
-      const startTime = Math.floor(s.from * 1000)
-      const endTime = Math.floor(s.to * 1000)
-      return {
-        words: [{ word: s.content.trim(), startTime, endTime }],
-        startTime,
-        endTime,
-        translatedLyric: '',
-        romanLyric: '',
-        isBG: false,
-        isDuet: false
-      }
-    })
-}
+const SIZE_MAP: Record<string, number> = { tiny: 14, xs: 18, sm: 22, md: 28, lg: 34, xl: 42, huge: 52 }
+const SIZE_KEYS = ['tiny', 'xs', 'sm', 'md', 'lg', 'xl', 'huge'] as const
 
 export default function ImmersivePlayer({ onClose }: ImmersivePlayerProps) {
   const { t } = useI18nStore()
   const {
-    currentTrack,
-    isPlaying,
-    currentTime,
-    duration,
-    volume,
-    muted,
-    playbackRate,
-    repeatMode,
-    shuffle,
-    setPlaying,
-    setCurrentTime,
-    setVolume,
-    setMuted,
-    setPlaybackRate,
-    setRepeatMode,
-    toggleShuffle,
-    playNext,
-    playPrevious
+    currentTrack, isPlaying, currentTime, duration, volume, muted,
+    playbackRate, repeatMode, shuffle,
+    setPlaying, setCurrentTime, setVolume, setMuted,
+    setPlaybackRate, setRepeatMode, toggleShuffle, playNext, playPrevious
   } = usePlayerStore()
 
-  const [rawLyrics, setRawLyrics] = useState<SubtitleItem[]>([])
+  const [lyricLines, setLyricLines] = useState<any[]>([])
   const [lyricLoading, setLyricLoading] = useState(false)
-  const [lyricError, setLyricError] = useState(false)
-  const [showConfig, setShowConfig] = useState(false)
-  const [lyricFontSize, setLyricFontSize] = useState(32)
-  const [lyricOpacity, setLyricOpacity] = useState(0.8)
-  const [showBgCover, setShowBgCover] = useState(true)
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-  const lyricsReadyRef = useRef(false)
-  const lyricLines = subtitlesToLyricLines(rawLyrics)
+  const [showSettings, setShowSettings] = useState(false)
+
+  // Persisted settings — lyric content
+  const [showTrans, setShowTrans] = usePersistedState('showTrans', true)
+  const [showRom, setShowRom] = usePersistedState('showRom', false)
+  const [swapTransRom, setSwapTransRom] = usePersistedState('swapTransRom', false)
+
+  // Persisted settings — lyric appearance
+  const [enableBlur, setEnableBlur] = usePersistedState('enableBlur', true)
+  const [enableScale, setEnableScale] = usePersistedState('enableScale', true)
+  const [enableSpring, setEnableSpring] = usePersistedState('enableSpring', true)
+  const [hidePassed, setHidePassed] = usePersistedState('hidePassed', false)
+  const [wordFade, setWordFade] = usePersistedState('wordFade', 0.5)
+  const [fontSize, setFontSize] = usePersistedState('fontSize', 'md')
+  const [bgCover, setBgCover] = usePersistedState('bgCover', true)
+  const [alignPos, setAlignPos] = usePersistedState('alignPos', 0.5)
+
+  // Persisted settings — music info
+  const [showName, setShowName] = usePersistedState('showName', true)
+  const [showArtist, setShowArtist] = usePersistedState('showArtist', true)
 
   const lrcTime = Math.floor(currentTime * 1000)
 
-  // Fetch subtitles — cid will be resolved from view API by getVideoSubtitles
   useEffect(() => {
     if (!currentTrack?.bvid) return
     setLyricLoading(true)
-    setRawLyrics([])
-    setLyricError(false)
-    lyricsReadyRef.current = false
-
-    getVideoSubtitles(currentTrack.bvid, currentTrack.cid || 0)
-      .then(subs => setRawLyrics(subs))
-      .catch(() => setRawLyrics([]))
+    setLyricLines([])
+    getVideoSubtitles(currentTrack.bvid, currentTrack.cid || 0, stripHtml(currentTrack.title))
+      .then(s => setLyricLines(s))
+      .catch(() => setLyricLines([]))
       .finally(() => setLyricLoading(false))
   }, [currentTrack?.bvid, currentTrack?.cid])
 
-  // Listen for iframe ready
-  useEffect(() => {
-    const handler = (e: MessageEvent) => {
-      if (e.data?.source === 'blbl-lyrics-iframe') {
-        if (e.data.type === 'ready') lyricsReadyRef.current = true
-        if (e.data.type === 'error') setLyricError(true)
-      }
+  const displayLines = useMemo(() => lyricLines.map(l => {
+    const line: any = { ...l }
+    if (!showTrans) line.translatedLyric = ''
+    if (!showRom) line.romanLyric = ''
+    if (swapTransRom && showTrans && showRom) {
+      [line.translatedLyric, line.romanLyric] = [line.romanLyric, line.translatedLyric]
     }
-    window.addEventListener('message', handler)
-    return () => window.removeEventListener('message', handler)
-  }, [])
+    return line
+  }), [lyricLines, showTrans, showRom, swapTransRom])
 
-  // Send data to iframe when lyrics or time changes
-  useEffect(() => {
-    if (!lyricsReadyRef.current || !iframeRef.current?.contentWindow) return
-    iframeRef.current.contentWindow.postMessage({
-      source: 'blbl-lyrics',
-      type: 'update',
-      lyricLines,
-      currentTime: lrcTime,
-      isPlaying
-    }, '*')
-  }, [lyricLines, lrcTime, isPlaying])
-
-  // Clear iframe on unmount
-  useEffect(() => {
-    return () => {
-      if (iframeRef.current?.contentWindow) {
-        iframeRef.current.contentWindow.postMessage({ source: 'blbl-lyrics', type: 'clear' }, '*')
-      }
-    }
-  }, [])
-
-  const handleSeek = useCallback((value: number[]) => {
-    const audio = document.querySelector('audio') as HTMLAudioElement
-    if (audio) {
-      audio.currentTime = value[0]
-      setCurrentTime(value[0])
-    }
+  const handleSeek = useCallback((v: number[]) => {
+    const a = document.querySelector('audio') as HTMLAudioElement
+    if (a) { a.currentTime = v[0]; setCurrentTime(v[0]) }
   }, [setCurrentTime])
 
-  const handleVolumeChange = useCallback((value: number[]) => {
-    setVolume(value[0])
-    if (value[0] > 0 && muted) setMuted(false)
-  }, [setVolume, muted, setMuted])
+  if (!currentTrack) return (
+    <div className="fixed inset-0 z-[100] bg-background flex items-center justify-center" onClick={onClose}>
+      <p className="text-muted-foreground">{t('player.chooseSong')}</p>
+    </div>
+  )
 
-  if (!currentTrack) {
-    return (
-      <div className="fixed inset-0 z-[100] bg-background flex items-center justify-center" onClick={onClose}>
-        <p className="text-muted-foreground">{t('player.chooseSong')}</p>
-      </div>
-    )
-  }
-
-  const trackTitle = stripHtml(currentTrack.title)
-  const trackPic = getHighResPic(currentTrack.pic || '')
-  const trackOwner = currentTrack.owner?.name || t('common.unknown')
-  const hasLyrics = rawLyrics.length > 0
+  const title = stripHtml(currentTrack.title)
+  const pic = getHighResPic(currentTrack.pic || '')
+  const owner = currentTrack.owner?.name || t('common.unknown')
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col" style={{
-      animation: 'fadeInScale 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards',
-      background: showBgCover && trackPic
-        ? `linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.85)), url(${trackPic}) center/cover no-repeat`
-        : '#000'
+      background: bgCover && pic
+        ? `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.85)), url(${pic}) center/cover no-repeat`
+        : '#111'
     }}>
-      {showBgCover && trackPic && (
+      {bgCover && pic && (
         <div className="absolute inset-0 backdrop-blur-xl" style={{ WebkitBackdropFilter: 'blur(40px)' }} />
       )}
 
-      {/* Top bar */}
-      <div className="relative z-10 flex items-center justify-between px-6 py-4">
+      {/* Top bar — subtle, full on hover */}
+      <div className="relative z-10 flex items-center justify-between px-6 py-4 opacity-25 hover:opacity-100 transition-opacity duration-500">
         <Button variant="ghost" size="icon" className="text-white/70 hover:text-white h-10 w-10" onClick={onClose}>
           <Icon name="keyboard_arrow_down" size={28} />
         </Button>
-        <div className="text-center">
-          <p className="text-white/80 text-[14px] font-medium">{trackTitle}</p>
-          <p className="text-white/40 text-[12px]">{trackOwner}</p>
-        </div>
-        <Button variant="ghost" size="icon" className="text-white/70 hover:text-white h-10 w-10" onClick={() => setShowConfig(!showConfig)}>
+        {(showName || showArtist) && (
+          <div className="text-center">
+            {showName && <p className="text-white/80 text-sm font-medium">{title}</p>}
+            {showArtist && <p className="text-white/40 text-xs">{owner}</p>}
+          </div>
+        )}
+        <Button variant="ghost" size="icon" className="text-white/70 hover:text-white h-10 w-10" onClick={() => setShowSettings(!showSettings)}>
           <Icon name="tune" size={24} />
         </Button>
       </div>
 
-      {/* Config panel */}
-      {showConfig && (
-        <div className="absolute right-4 top-16 z-20 p-4 rounded-[14px] bg-card border border-border shadow w-64"
-          style={{ animation: 'fadeInDown 0.2s ease-out' }}>
-          <h3 className="text-[14px] font-bold text-foreground mb-3">沉浸播放设置</h3>
+      {/* Settings panel — organized by sections matching amll-page */}
+      {showSettings && (
+        <div className="absolute right-4 top-16 z-20 p-4 rounded-2xl bg-card border border-border shadow w-64 max-h-[70vh] overflow-y-auto animate-in fade-in slide-in-from-top-2 pointer-events-auto">
+          <h3 className="text-sm font-bold text-foreground mb-3">{t('immersive.title')}</h3>
+
           <div className="space-y-3">
-            <label className="flex items-center justify-between text-[12px] text-muted-foreground">
-              背景封面
-              <button onClick={() => setShowBgCover(!showBgCover)}
-                className={`w-10 h-5 rounded-full transition-colors ${showBgCover ? 'bg-primary' : 'bg-muted'}`}>
-                <div className={`w-4 h-4 rounded-full bg-white transition-transform ${showBgCover ? 'translate-x-5' : 'translate-x-0.5'}`}
-                  style={{ margin: '1px 0 0 1px' }} />
-              </button>
+            {/* Content */}
+            <Section label={t('immersive.section.content')} />
+            <Toggle label={t('immersive.showTranslation')} v={showTrans} set={setShowTrans} />
+            <Toggle label={t('immersive.showRoman')} v={showRom} set={setShowRom} />
+            {showTrans && showRom && (
+              <Toggle label={t('immersive.swapTransRoman')} v={swapTransRom} set={setSwapTransRom} />
+            )}
+
+            {/* Appearance */}
+            <Section label={t('immersive.section.appearance')} />
+            <label className="flex items-center justify-between text-xs text-muted-foreground">
+              {t('immersive.fontSize')}
+              <div className="flex gap-0.5">
+                {SIZE_KEYS.map(k => (
+                  <button key={k} onClick={() => setFontSize(k)}
+                    className={`w-7 h-5 rounded text-[10px] font-medium transition-colors ${fontSize === k ? 'bg-primary text-primary-fg' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
+                  >{SIZE_MAP[k]}</button>
+                ))}
+              </div>
             </label>
-            <label className="block text-[12px] text-muted-foreground">
-              歌词字号
-              <Slider value={[lyricFontSize]} min={16} max={56} step={2} onValueChange={v => setLyricFontSize(v[0])} className="mt-1" />
-              <span className="text-[10px] float-right">{lyricFontSize}px</span>
+            <Toggle label={t('immersive.blur')} v={enableBlur} set={setEnableBlur} />
+            <Toggle label={t('immersive.scale')} v={enableScale} set={setEnableScale} />
+            <Toggle label={t('immersive.spring')} v={enableSpring} set={setEnableSpring} />
+            <Toggle label={t('immersive.hidePassed')} v={hidePassed} set={setHidePassed} />
+            <label className="block text-xs text-muted-foreground">
+              {t('immersive.wordFade')} ({(wordFade * 100).toFixed(0)}%)
+              <Slider value={[wordFade]} min={0} max={2} step={0.1} onValueChange={v => setWordFade(v[0])} className="mt-1" />
             </label>
-            <label className="block text-[12px] text-muted-foreground">
-              歌词透明度
-              <Slider value={[lyricOpacity]} min={0.3} max={1} step={0.05} onValueChange={v => setLyricOpacity(v[0])} className="mt-1" />
+
+            {/* Music info */}
+            <Section label={t('immersive.section.musicInfo')} />
+            <Toggle label={t('immersive.showName')} v={showName} set={setShowName} />
+            <Toggle label={t('immersive.showArtist')} v={showArtist} set={setShowArtist} />
+            <Toggle label={t('immersive.bgCover')} v={bgCover} set={setBgCover} />
+
+            {/* Position */}
+            <Section label={t('immersive.section.position')} />
+            <label className="block text-xs text-muted-foreground">
+              {t('immersive.alignPos')} ({(alignPos * 100).toFixed(0)}%)
+              <Slider value={[alignPos]} min={0} max={1} step={0.05} onValueChange={v => setAlignPos(v[0])} className="mt-1" />
             </label>
           </div>
         </div>
       )}
 
-      {/* Album art */}
-      <div className="relative z-10 flex-1 flex items-center justify-center min-h-0">
-        <div className="flex flex-col items-center gap-6 w-full max-w-2xl">
-          <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-2xl flex-shrink-0" style={{ animation: 'fadeInScale 0.6s ease-out' }}>
-            {trackPic ? (
-              <img src={trackPic} alt={trackTitle} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-accent flex items-center justify-center">
-                <Icon name="music_note" size={48} className="text-muted-foreground" />
-              </div>
-            )}
-          </div>
-
-          {/* Lyrics area — iframe */}
-          <div className="w-full flex-1 min-h-[240px]" style={{ opacity: lyricOpacity }}>
-            {lyricLoading ? (
-              <div className="flex items-center justify-center gap-2 text-white/50 py-8">
-                <Icon name="progress_activity" size={18} className="animate-spin" />
-                加载歌词中...
-              </div>
-            ) : hasLyrics && !lyricError ? (
-              <iframe
-                ref={iframeRef}
-                src="./src/lyrics/index.html"
-                style={{ width: '100%', height: '300px', border: 'none', background: 'transparent' }}
-                title="lyrics"
-                allowTransparency
-              />
-            ) : lyricError ? (
-              <div className="text-center text-white/30 py-12 text-[14px] flex flex-col items-center gap-2">
-                <span>😿</span>
-                <span>歌词组件加载失败</span>
-                <button onClick={() => { setLyricError(false); setRawLyrics([]); if (currentTrack?.bvid) { setLyricLoading(true); getVideoSubtitles(currentTrack.bvid, currentTrack.cid!).then(s => { setRawLyrics(s); setLyricLoading(false); }).catch(() => setLyricLoading(false)); } }}
-                  className="px-3 py-1 mt-2 rounded-lg bg-white/10 text-white/60 hover:bg-white/20 text-[12px] transition-colors">
-                  重试
-                </button>
-              </div>
-            ) : (
-              <div className="text-center text-white/30 py-12 text-[14px]">
-                暂无歌词
-              </div>
-            )}
-          </div>
+      {/* Lyrics — fills available space with stable container */}
+      <div className="flex-1 relative z-10 min-h-0" style={{ '--amll-lp-font-size': `${SIZE_MAP[fontSize]}px` } as React.CSSProperties}>
+        <div className="absolute inset-0 flex items-center justify-center" style={{
+          isolation: 'isolate', transformStyle: 'flat', contain: 'layout style paint',
+        }}>
+          {lyricLoading ? (
+            <div className="flex items-center justify-center gap-2 text-white/40">
+              <Icon name="progress_activity" size={18} className="animate-spin" />{t('immersive.loading')}
+            </div>
+          ) : lyricLines.length === 0 ? (
+            <div className="text-white/20 text-sm">{t('immersive.noLyrics')}</div>
+          ) : (
+            <LyricPlayer
+              lyricLines={displayLines}
+              currentTime={lrcTime}
+              playing={isPlaying}
+              alignPosition={alignPos}
+              enableBlur={enableBlur}
+              enableScale={enableScale}
+              enableSpring={enableSpring}
+              hidePassedLines={hidePassed}
+              wordFadeWidth={wordFade}
+              style={{ width: '100%', height: '100%' }}
+            />
+          )}
         </div>
       </div>
 
-      {/* Player controls */}
-      <div className="relative z-10 px-8 pb-8 pt-4">
-        <div className="max-w-2xl mx-auto mb-4">
+      {/* Controls — subtle, full on hover */}
+      <div className="relative z-20 px-8 pb-6 pt-2 flex-shrink-0 opacity-20 hover:opacity-100 transition-opacity duration-500">
+        <div className="max-w-2xl mx-auto mb-3">
           <Slider value={[currentTime]} max={duration || 100} step={1} onValueChange={handleSeek} />
           <div className="flex justify-between text-[11px] text-white/50 font-mono mt-1">
             <span>{formatDuration(Math.floor(currentTime))}</span>
             <span>{formatDuration(Math.floor(duration))}</span>
           </div>
         </div>
-
-        <div className="flex items-center justify-center gap-4 max-w-2xl mx-auto">
-          <Button size="icon" variant="ghost" className="text-white/60 hover:text-white h-10 w-10" onClick={toggleShuffle}>
-            <Icon name="shuffle" size={20} filled={shuffle} />
-          </Button>
-          <Button size="icon" variant="ghost" className="text-white/60 hover:text-white h-10 w-10" onClick={playPrevious}>
-            <Icon name="skip_previous" size={24} />
-          </Button>
-          <Button size="icon" className="h-14 w-14 rounded-full bg-white text-black hover:bg-white/90 hover:scale-105 transition-transform"
+        <div className="flex items-center justify-center gap-3 max-w-2xl mx-auto">
+          <Ctl icon="shuffle" active={shuffle} onClick={toggleShuffle} />
+          <Ctl icon="skip_previous" onClick={playPrevious} />
+          <Button size="icon" className="h-12 w-12 rounded-full bg-white text-black hover:scale-105 transition-transform"
             onClick={() => setPlaying(!isPlaying)}>
-            <Icon name={isPlaying ? 'pause' : 'play_arrow'} size={28} />
+            <Icon name={isPlaying ? 'pause' : 'play_arrow'} size={24} />
           </Button>
-          <Button size="icon" variant="ghost" className="text-white/60 hover:text-white h-10 w-10" onClick={playNext}>
-            <Icon name="skip_next" size={24} />
-          </Button>
-          <Button size="icon" variant="ghost" className="text-white/60 hover:text-white h-10 w-10"
-            onClick={() => setRepeatMode(repeatMode === 'none' ? 'all' : repeatMode === 'all' ? 'one' : 'none')}>
-            <Icon name={repeatMode === 'one' ? 'repeat_one' : 'repeat'} size={20} filled={repeatMode !== 'none'} />
-          </Button>
+          <Ctl icon="skip_next" onClick={playNext} />
+          <Ctl icon={repeatMode === 'one' ? 'repeat_one' : 'repeat'}
+            active={repeatMode !== 'none'}
+            onClick={() => setRepeatMode(repeatMode === 'none' ? 'all' : repeatMode === 'all' ? 'one' : 'none')} />
         </div>
-
-        <div className="flex items-center justify-center gap-6 mt-4 max-w-2xl mx-auto">
-          <div className="flex items-center gap-2">
-            <Button size="icon" variant="ghost" className="text-white/50 hover:text-white h-7 w-7"
-              onClick={() => setMuted(!muted)}>
-              <Icon name={muted || volume === 0 ? 'volume_off' : 'volume_up'} size={16} />
-            </Button>
-            <Slider value={[muted ? 0 : volume]} max={1} step={0.01} onValueChange={handleVolumeChange} className="w-24" />
-          </div>
-          <div className="flex items-center gap-1">
-            {[0.5, 0.75, 1, 1.25, 1.5, 2].map(rate => (
-              <button key={rate} onClick={() => setPlaybackRate(rate)}
-                className={`px-2 py-0.5 rounded text-[12px] transition-colors ${
-                  playbackRate === rate ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white/70'
-                }`}>{rate}x</button>
-            ))}
-          </div>
+        <div className="flex items-center justify-center gap-4 mt-3">
+          <Button size="icon" variant="ghost" className="text-white/40 hover:text-white h-6 w-6" onClick={() => setMuted(!muted)}>
+            <Icon name={muted || volume === 0 ? 'volume_off' : 'volume_up'} size={14} />
+          </Button>
+          <Slider value={[muted ? 0 : volume]} max={1} step={0.01} onValueChange={v => { setVolume(v[0]); if (v[0] > 0 && muted) setMuted(false) }} className="w-20" />
+          {[0.5, 0.75, 1, 1.25, 1.5, 2].map(r => (
+            <button key={r} onClick={() => setPlaybackRate(r)}
+              className={`px-2 py-0.5 rounded text-[11px] ${playbackRate === r ? 'bg-white/20 text-white' : 'text-white/35 hover:text-white/60'}`}>{r}x</button>
+          ))}
         </div>
       </div>
     </div>
   )
+}
+
+function Section({ label }: { label: string }) {
+  return <p className="text-[11px] font-semibold text-foreground/60 uppercase tracking-wide pt-1">{label}</p>
+}
+
+function Toggle({ label, v, set }: { label: string; v: boolean; set: (x: boolean) => void }) {
+  return <label className="flex items-center justify-between text-xs text-muted-foreground">{label}
+    <button onClick={() => set(!v)} className={`w-9 h-5 rounded-full transition-colors ${v ? 'bg-primary' : 'bg-muted'}`}>
+      <div className={`w-4 h-4 rounded-full bg-white transition-transform ${v ? 'translate-x-[18px]' : 'translate-x-px'}`} style={{ margin: 1 }} />
+    </button>
+  </label>
+}
+
+function Ctl({ icon, active, onClick }: { icon: string; active?: boolean; onClick: () => void }) {
+  return <Button size="icon" variant="ghost" className={`h-9 w-9 ${active ? 'text-white' : 'text-white/50 hover:text-white'}`} onClick={onClick}><Icon name={icon} size={18} filled={active} /></Button>
 }

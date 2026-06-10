@@ -3,9 +3,12 @@ import path from 'path'
 import react from '@vitejs/plugin-react'
 import electron from 'vite-plugin-electron'
 import renderer from 'vite-plugin-electron-renderer'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 export default defineConfig({
+  base: './',
   plugins: [
+    nodePolyfills(),
     react(),
     electron([
       {
@@ -51,6 +54,9 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src')
     }
+  },
+  define: {
+    global: 'globalThis'
   },
   build: {
     outDir: 'dist',

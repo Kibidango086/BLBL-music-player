@@ -3,6 +3,11 @@ import path from 'path'
 import fs from 'fs'
 
 app.setName('blbl-music-player')
+
+// Force WebGL availability (Chromium GPU blacklist workaround, critical for AMLL/PixiJS)
+app.commandLine.appendSwitch('ignore-gpu-blocklist')
+app.commandLine.appendSwitch('enable-webgl')
+
 import {
   searchBilibili,
   getVideoInfo,
@@ -86,8 +91,8 @@ ipcMain.handle('bili-popular', async () => {
   return []
 })
 
-ipcMain.handle('bili-subtitles', async (_event, bvid: string, cid: number) => {
-  return await getVideoSubtitles(bvid, cid)
+ipcMain.handle('bili-subtitles', async (_event, bvid: string, cid: number, title?: string) => {
+  return await getVideoSubtitles(bvid, cid, title)
 })
 
 ipcMain.handle('bili-login-status', async () => {

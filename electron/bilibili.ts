@@ -1,6 +1,7 @@
 import { net, session } from 'electron'
 import type { IncomingMessage } from "http"
 import crypto from 'crypto'
+import { searchAMLLDB, type LyricLine } from './amll-db'
 
 const API_BASE = 'https://api.bilibili.com'
 
@@ -293,13 +294,26 @@ export interface SubtitleItem {
   from: number
   to: number
   content: string
+  translation?: string
+  roman?: string
 }
 
 
-export async function getVideoSubtitles(bvid: string, cid: number): Promise<SubtitleItem[]> {
-  console.log(`[Subtitle] === Fetching for bvid=${bvid} cid=${cid} ===`)
+export async function getVideoSubtitles(bvid: string, cid: number, title?: string): Promise<LyricLine[]> {
+  console.log(`[Subtitle] === Fetching for bvid=${bvid} cid=${cid} title="${title || ''}" ===`)
 
   try {
+    // Step 0: Try AMLL database first
+    if (title) {
+      console.log('[Subtitle] Trying AMLL DB search...')
+      const amllResult = await searchAMLLDB(title)
+      if (amllResult.length > 0) {
+        console.log(`[Subtitle] ✅ Using AMLL: ${amllResult.length} lines`)
+        return amllResult
+      }
+      console.log('[Subtitle] AMLL not found, falling back to Bilibili')
+    }
+
     // Step 1: Get video info to find the EXACT page CID
     const viewUrl = `${API_BASE}/x/web-interface/view?bvid=${encodeURIComponent(bvid)}`
     const viewRes = await request(viewUrl)
@@ -386,7 +400,15 @@ export async function getVideoSubtitles(bvid: string, cid: number): Promise<Subt
       if (items.length > 0) {
         console.log(`[Subtitle] ✅ ${items.length} lines (${sub.lan_doc || sub.lan})`)
         console.log(`[Subtitle] Sample:`, items.slice(0, 2).map(i => `[${i.from}-${i.to}] ${i.content}`))
-        return items
+        return items.map(i => ({
+          words: [{ word: i.content, startTime: Math.floor(i.from * 1000), endTime: Math.floor(i.to * 1000) }],
+          startTime: Math.floor(i.from * 1000),
+          endTime: Math.floor(i.to * 1000),
+          translatedLyric: '',
+          romanLyric: '',
+          isBG: false,
+          isDuet: false
+        }))
       }
     }
 

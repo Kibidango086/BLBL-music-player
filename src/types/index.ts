@@ -73,7 +73,7 @@ export interface ElectronAPI {
   biliSetCookies: (cookies: { name: string; value: string }[]) => Promise<{ success: boolean; status?: LoginStatus; error?: string }>
   biliCreateFav: (title: string, intro: string, privacy: number) => Promise<any>
   biliAddToFav: (aidList: number[], mediaId: number) => Promise<any>
-  biliSubtitles: (bvid: string, cid: number) => Promise<any[]>
+  biliSubtitles: (bvid: string, cid: number, title?: string) => Promise<any[]>
   setProxy: (config: { rules: string; username?: string; password?: string }) => Promise<{ success: boolean; error?: string }>
   getProxy: () => Promise<{ rules: string }>
   openExternal: (url: string) => Promise<void>
