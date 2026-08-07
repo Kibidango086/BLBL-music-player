@@ -120,22 +120,10 @@ ipcMain.handle('bili-set-cookies', async (_event, cookies: { name: string; value
     const oneYearLater = Date.now() / 1000 + 365 * 24 * 60 * 60
     for (const cookie of cookies) {
       if (!cookie.value) continue
-      // Set on multiple domains to ensure coverage
-      for (const domain of ['.bilibili.com', 'bilibili.com']) {
-        await session.defaultSession.cookies.set({
-          url: `https://${domain}`,
-          name: cookie.name,
-          value: cookie.value,
-          domain,
-          path: '/',
-          secure: true,
-          sameSite: 'no_restriction' as const,
-          expirationDate: oneYearLater
-        })
-      }
-      // Also set on api subdomain explicitly
+      // A .bilibili.com domain cookie covers www/api/passport and all other
+      // subdomains, so one set per cookie is enough.
       await session.defaultSession.cookies.set({
-        url: 'https://api.bilibili.com',
+        url: 'https://www.bilibili.com',
         name: cookie.name,
         value: cookie.value,
         domain: '.bilibili.com',
