@@ -1,5 +1,9 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import { usePlayerStore } from '@/store/playerStore'
+import { useSurroundStore } from '@/store/surroundStore'
+import { useToastStore } from '@/store/toastStore'
+import { useI18nStore } from '@/i18n'
+import { surroundEngine } from '@/lib/surroundAudio'
 import { getVideoInfo, getPlayUrl } from '@/lib/bilibili-api'
 
 export function AudioPlayer() {
@@ -21,6 +25,16 @@ const {
     playNext,
     playPrevious
   } = usePlayerStore()
+
+  // 深度环绕音
+  const surroundEnabled = useSurroundStore((s) => s.enabled)
+  const surroundMode = useSurroundStore((s) => s.mode)
+  const surroundDepth = useSurroundStore((s) => s.depth)
+  const surroundSpeed = useSurroundStore((s) => s.speed)
+  const surroundDirection = useSurroundStore((s) => s.direction)
+  const surroundWidth = useSurroundStore((s) => s.width)
+  const showToast = useToastStore((s) => s.showToast)
+  const t = useI18nStore((s) => s.t)
 
   // Load audio URL when track changes
   useEffect(() => {
@@ -124,6 +138,42 @@ const {
     if (!audio) return
     audio.playbackRate = playbackRate
   }, [playbackRate])
+
+  // ---- 深度环绕音 ----
+  // 把 <audio> 交给环绕引擎；引擎只有在实测音源可用后才会真正接管音频输出
+  useEffect(() => {
+    surroundEngine.attach(audioRef.current, {
+      onActivated: () => showToast(t('surround.activated'), 'success'),
+      onUnsupported: () => showToast(t('surround.unsupported'), 'error')
+    })
+  }, [showToast, t])
+
+  useEffect(() => {
+    surroundEngine.apply({
+      enabled: surroundEnabled,
+      mode: surroundMode,
+      depth: surroundDepth,
+      speed: surroundSpeed,
+      direction: surroundDirection,
+      width: surroundWidth
+    })
+  }, [
+    surroundEnabled,
+    surroundMode,
+    surroundDepth,
+    surroundSpeed,
+    surroundDirection,
+    surroundWidth
+  ])
+
+  // 切歌后音源会变，需要让引擎重新校验并接管
+  useEffect(() => {
+    surroundEngine.notifySourceChange()
+  }, [audioSrc])
+
+  useEffect(() => {
+    if (isPlaying) surroundEngine.resume()
+  }, [isPlaying, audioSrc])
 
   // Media Session API
   useEffect(() => {

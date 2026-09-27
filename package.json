@@ -1,6 +1,6 @@
 {
   "name": "blbl-music-player",
-  "version": "2.1.2",
+  "version": "2.2.0",
   "description": "Bilibili as a music player - Electron desktop app",
   "main": "dist-electron/main.js",
   "scripts": {

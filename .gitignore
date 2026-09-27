@@ -1,14 +1,23 @@
-# Dependencies
+# ---------- Dependencies ----------
 node_modules
 .pnp
 .pnp.js
+.yarn/cache
+.yarn/install-state.gz
 
-# Build outputs
+# ---------- Build outputs ----------
 dist
+dist-ssr
 dist-electron
 release
+out
+*.tsbuildinfo
+vite.config.ts.timestamp-*.mjs
 
-# Logs
+# ---------- Local verification harness (不入库，仅本地使用) ----------
+.surround-verify/
+
+# ---------- Logs ----------
 logs
 *.log
 npm-debug.log*
@@ -17,20 +26,32 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Editor directories and files
+# ---------- Environment ----------
+.env
+.env.local
+.env.*.local
+
+# ---------- Editor directories and files ----------
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-# Testing
+# ---------- OS ----------
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+
+# ---------- Testing ----------
 coverage
 *.local
 
-# Misc
+# ---------- Misc ----------
 .bun-cache
+bun.lockb
+.eslintcache

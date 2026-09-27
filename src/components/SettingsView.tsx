@@ -7,6 +7,7 @@ import { useI18nStore } from '@/i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Icon } from '@/components/ui/icon'
+import { SurroundSettings } from '@/components/SurroundSettings'
 import { getHighResPic } from '@/lib/utils'
 
 export function SettingsView() {
@@ -143,6 +144,9 @@ export function SettingsView() {
             </div>
           </div>
         </div>
+
+        {/* Sound Effects */}
+        <SurroundSettings />
 
         {/* Language */}
         <div className="p-5 rounded-xl bg-card border border-border shadow">
@@ -288,7 +292,7 @@ export function SettingsView() {
             logout()
             // Clear after state flush so zustand persist doesn't re-write
             setTimeout(() => {
-              ['blbl-player-storage', 'blbl-proxy-storage', 'blbl-theme-storage', 'blbl-locale-storage', 'blbl-user-storage']
+              ['blbl-player-storage', 'blbl-proxy-storage', 'blbl-theme-storage', 'blbl-locale-storage', 'blbl-user-storage', 'blbl-surround-storage']
                 .forEach(key => localStorage.removeItem(key))
               window.location.reload()
             }, 50)

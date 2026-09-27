@@ -5,6 +5,7 @@ import { Slider } from '@/components/ui/slider'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Icon } from '@/components/ui/icon'
 import { usePlayerStore } from '@/store/playerStore'
+import { useSurroundStore } from '@/store/surroundStore'
 import { useI18nStore } from '@/i18n'
 import { formatDuration } from '@/lib/bilibili-api'
 import { cn, stripHtml, getHighResPic } from '@/lib/utils'
@@ -38,6 +39,8 @@ export function PlayerBar({ onAlbumClick }: PlayerBarProps) {
     playPrevious
   } = usePlayerStore()
   const { t } = useI18nStore()
+  const surroundEnabled = useSurroundStore((s) => s.enabled)
+  const toggleSurround = useSurroundStore((s) => s.toggle)
   const [showRatePopover, setShowRatePopover] = useState(false)
   const [customRate, setCustomRate] = useState('')
   const trackKeyRef = useRef(currentTrack?.bvid || '')
@@ -271,6 +274,22 @@ export function PlayerBar({ onAlbumClick }: PlayerBarProps) {
               </div>
             )}
           </div>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className={cn('h-7 w-7', surroundEnabled && 'text-primary bg-accent')}
+                onClick={toggleSurround}
+              >
+                <Icon name="surround_sound" size={16} filled={surroundEnabled} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              {surroundEnabled ? t('surround.on') : t('surround.off')}
+            </TooltipContent>
+          </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
