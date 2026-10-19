@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { imageURL } from '@/lib/media'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -36,8 +37,5 @@ export function safeGet<T>(obj: any, path: string, fallback: T): T {
  * URLs like `.../xxx.jpg@320w_200h` become `.../xxx.jpg`
  */
 export function getHighResPic(url: string | undefined | null): string {
-  if (!url) return ''
-  const idx = url.indexOf('@')
-  if (idx !== -1) return url.slice(0, idx)
-  return url
+  return imageURL(url)
 }

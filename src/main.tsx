@@ -3,6 +3,13 @@ import ReactDOM from 'react-dom/client'
 import './index.css'
 import App from './App'
 import { useThemeStore } from '@/store/themeStore'
+import { initMediaProxy, installElectronAPI } from '@/lib/mygo-bridge'
+
+// The desktop API the components call, on top of the MyGo runtime and the Go
+// services: installed before the first render, as the preload script was.
+installElectronAPI()
+// The pictures come from Go, which fetches them with bilibili's Referer.
+await initMediaProxy()
 
 function Root() {
   const { isDark, accentHue } = useThemeStore()

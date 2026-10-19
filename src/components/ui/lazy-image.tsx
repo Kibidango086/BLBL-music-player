@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { imageURL } from '@/lib/media'
 
 interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string
@@ -36,7 +37,7 @@ export function LazyImage({ src, wrapperClassName, className, ...props }: LazyIm
       {inView ? (
         <img
           ref={imgRef}
-          src={src}
+          src={imageURL(src)}
           className={`${className} ${loaded ? '' : 'opacity-0'}`}
           onLoad={() => setLoaded(true)}
           loading="lazy"
