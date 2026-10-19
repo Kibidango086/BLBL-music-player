@@ -63,4 +63,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$GITHUB_REF_NAME" build/*/* --clobber
+        # The files of every platform, but not the macOS app bundle, which is
+        # a directory: its disk image is what people download.
+        run: find build -mindepth 2 -maxdepth 2 -type f -exec gh release upload "$GITHUB_REF_NAME" {} --clobber +
