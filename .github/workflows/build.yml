@@ -49,8 +49,20 @@ jobs:
         if: matrix.name == 'Windows' && runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y nsis
 
+      - name: Install rpmbuild, for the RPM packages
+        if: matrix.name == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
       - name: Build
         run: bun run build -- -platform "${{ matrix.platform }}"
+
+      - name: Build the RPM packages
+        if: matrix.name == 'Linux'
+        run: |
+          version=$(node -p "require('./package.json').version")
+          for dir in build/linux-*; do
+            scripts/build-rpm.sh "$dir" "$version"
+          done
 
       - name: Keep the builds
         uses: actions/upload-artifact@v4
@@ -67,12 +79,12 @@ jobs:
           set -eu
           mkdir -p release
           find build -mindepth 2 -maxdepth 2 -type f \
-            \( -name '*.deb' -o -name '*.tar.gz' -o -name '*.dmg' -o -name '*.exe' \) -print0 |
+            \( -name '*.deb' -o -name '*.rpm' -o -name '*.tar.gz' -o -name '*.dmg' -o -name '*.exe' \) -print0 |
           while IFS= read -r -d '' f; do
             platform=$(basename "$(dirname "$f")")
             name=$(basename "$f")
             case "$name" in
-              *amd64*|*arm64*|*universal*) cp "$f" "release/$name" ;;
+              *amd64*|*arm64*|*x86_64*|*aarch64*|*universal*) cp "$f" "release/$name" ;;
               *) cp "$f" "release/${name%.*}-$platform.${name##*.}" ;;
             esac
           done

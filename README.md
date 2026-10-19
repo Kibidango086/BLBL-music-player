@@ -66,7 +66,8 @@ bun run build -- -platform darwin/universal,windows/amd64,linux/amd64
 ```
 
 产物：macOS `.app` + `.dmg`，Windows `.exe` + 安装包，Linux 可执行文件 + 桌面项 +
-`.deb`。MyGo 不需要 cgo，所以任何一台机器都能交叉构建所有平台（macOS 的签名与
+`.deb` + `.rpm`（RPM 由 `scripts/build-rpm.sh` 从同一个 `.deb` 的文件布局生成，两者安装
+的内容一致）。MyGo 不需要 cgo，所以任何一台机器都能交叉构建所有平台（macOS 的签名与
 dmg 需要 macOS 机器）。`.github/workflows/build.yml` 在打 tag 时构建并上传到 Release。
 
 ## 结构
