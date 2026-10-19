@@ -59,10 +59,27 @@ jobs:
           path: build/
           if-no-files-found: error
 
+      - name: Collect the installers
+        # A row builds several architectures into build/<os>-<arch>/, and some
+        # names repeat across them (the portable app, install.sh): name the
+        # ones that do not carry their architecture.
+        run: |
+          set -eu
+          mkdir -p release
+          find build -mindepth 2 -maxdepth 2 -type f \
+            \( -name '*.deb' -o -name '*.tar.gz' -o -name '*.dmg' -o -name '*.exe' \) -print0 |
+          while IFS= read -r -d '' f; do
+            platform=$(basename "$(dirname "$f")")
+            name=$(basename "$f")
+            case "$name" in
+              *amd64*|*arm64*|*universal*) cp "$f" "release/$name" ;;
+              *) cp "$f" "release/${name%.*}-$platform.${name##*.}" ;;
+            esac
+          done
+          ls -l release
+
       - name: Upload them to the release
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
-        # The files of every platform, but not the macOS app bundle, which is
-        # a directory: its disk image is what people download.
-        run: find build -mindepth 2 -maxdepth 2 -type f -exec gh release upload "$GITHUB_REF_NAME" --clobber {} +
+        run: gh release upload "$GITHUB_REF_NAME" --clobber release/*
