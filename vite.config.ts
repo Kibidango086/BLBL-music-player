@@ -42,12 +42,26 @@ const canvasInfo = () => {
   return "c=" + list.length + "[" + sizes.join(",") + "]";
 };
 const history = [];
+let reportErr = "-";
+const report = (s) => {
+  // A native window's title is hard to read on Wayland: report over HTTP too.
+  const url = "http://127.0.0.1:8098/report?s=" + encodeURIComponent(s).slice(0, 1800);
+  const img = new Image();
+  img.onerror = () => { reportErr = "img-error"; };
+  img.onload = () => { reportErr = "img-ok"; };
+  img.src = url;
+  fetch(url)
+    .then((r) => r.text())
+    .then((t) => { reportErr = "fetch-ok:" + t; })
+    .catch((e) => { reportErr = "fetch-" + e.name; });
+};
 const say = (s) => {
+  report(s);
   state = s;
   history.push(s);
   const a = document.querySelector("audio");
-  document.title = "E2E " + history.join(" || ") + " | " + audioInfo() + " | " + canvasInfo() +
-    " | paused=" + (a ? a.paused : "?") + " | playErr=" + (window.__playError || "-");
+  document.title = "E2E " + history.join(" || ") + " | report=" + reportErr + " | " + audioInfo() +
+    " | paused=" + (a ? a.paused : "?");
 };
 window.addEventListener("error", (e) => {
   const m = e.message || "";
@@ -165,7 +179,7 @@ async function fpsw() {
   await sleep(400);
   results.animNone = await fpsFor(1500);
   style("w", "");
-  say("fpsw " + JSON.stringify(results));
+  document.title = "E2E " + results.base + "," + results.threeD + "," + results.animNone;
 }
 async function fpsv() {
   await sleep(1500);
@@ -296,6 +310,13 @@ async function imfpsx() {
   style("i", "");
   say("imfpsx " + JSON.stringify(r));
 }
+async function quickfps() {
+  await sleep(8000);
+  const a = await fpsFor(3000);
+  const b = await fpsFor(3000);
+  const c = await fpsFor(3000);
+  document.title = "E2E " + a + "," + b + "," + c + " class=" + document.documentElement.className;
+}
 async function filters() {
   const list = [...document.querySelectorAll("*")]
     .map((e) => ({ e, f: getComputedStyle(e).filter }))
@@ -310,7 +331,7 @@ async function imfps() {
   art.click();
   await sleep(2500);
   const fps = await fpsFor(2000);
-  say("imfps=" + fps);
+  document.title = "E2E im " + fps + "fps";
 }
 async function login() {
   say("login-opening");
@@ -374,6 +395,7 @@ async function run() {
   if (steps.includes("imfps")) await imfps();
   if (steps.includes("imfpsx")) await imfpsx();
   if (steps.includes("filters")) await filters();
+  if (steps.includes("quickfps")) await quickfps();
   if (steps.includes("immersive")) await immersive();
   if (steps.includes("wait")) await sleep(4000), say(state);
   if (steps.includes("images")) await images();

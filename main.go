@@ -8,6 +8,10 @@ import (
 )
 
 func main() {
+	// Before App.Run, which starts the webview: whether it may draw on the GPU
+	// decides whether the page animates (gpu.go).
+	compositing = setupCompositing()
+
 	core := newCore()
 
 	// The services the page calls: bilibili's API, and the desktop's own

@@ -49,6 +49,18 @@ export async function initMediaProxy(): Promise<void> {
   }
 }
 
+/** Marks the document when the webview draws on the GPU, which the stylesheet
+ *  reads to decide whether the page may animate. */
+export async function initRendering(): Promise<void> {
+  if (!isMyGo()) return;
+  try {
+    const gpu = await System.gpu();
+    document.documentElement.classList.toggle("composited", gpu.compositing);
+  } catch (err) {
+    console.error("[gpu]", err);
+  }
+}
+
 /** Installs the desktop API the components call, once, before they render. */
 export function installElectronAPI(): void {
   if (typeof window === "undefined") return;

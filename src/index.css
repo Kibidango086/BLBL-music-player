@@ -138,13 +138,15 @@
     background: radial-gradient(circle, var(--blob), transparent 70%);
     opacity: 0.6;
   }
-  /* No sway: WebKitGTK repaints the whole window for every frame of a moving
-     fixed element (3 fps instead of 60), and no compositing hint helps. The
-     blobs stay, still and blurred; the sway comes back with a webview that
-     composites transforms. */
-  body::before, body::after {
-    animation: none;
-  }
+  /* The sway is off, and these blobs are the reason the app was slow.
+     WebKitGTK accelerates a composited layer (a 3D transform, will-change)
+     for real on X11 — 60 fps with the sway running — but not in this Wayland
+     session, where the same animation repaints the window at 4 fps, and a 2D
+     one at 3 fps. Nothing static costs anything, so they stay still; the
+     keyframes below keep the 3D form, so turning the sway back on is these
+     two lines. */
+  body::before { animation: blobSway1 14s ease-in-out infinite; }
+  body::after { animation: blobSway2 18s ease-in-out infinite; }
   .material-symbols-rounded {
     font-family: 'Material Symbols Rounded';
     font-weight: normal;
@@ -180,16 +182,16 @@
    Background blob sway — gentle wind
    ============================================================ */
 @keyframes blobSway1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(45px, -35px) scale(1.08); }
-  50% { transform: translate(-20px, 28px) scale(0.92); }
-  75% { transform: translate(-40px, -15px) scale(1.05); }
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  25% { transform: translate3d(45px, -35px, 0) scale(1.08); }
+  50% { transform: translate3d(-20px, 28px, 0) scale(0.92); }
+  75% { transform: translate3d(-40px, -15px, 0) scale(1.05); }
 }
 @keyframes blobSway2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(-40px, 35px) scale(1.09); }
-  50% { transform: translate(28px, -25px) scale(0.91); }
-  75% { transform: translate(35px, 15px) scale(1.07); }
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  25% { transform: translate3d(-40px, 35px, 0) scale(1.09); }
+  50% { transform: translate3d(28px, -25px, 0) scale(0.91); }
+  75% { transform: translate3d(35px, 15px, 0) scale(1.07); }
 }
 
 /* ============================================================

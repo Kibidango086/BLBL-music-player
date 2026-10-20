@@ -364,6 +364,16 @@ func allowedMediaURL(raw string) bool {
 // System: the desktop calls the page makes
 // ---------------------------------------------------------------------------
 
+// compositing says whether the webview draws on the GPU, set before App.Run.
+var compositing bool
+
+// GPUInfo tells the page whether the webview draws on the GPU: it keeps its
+// softest effects, the sway of the background and the blur of lyrics, only
+// when it can afford them.
+type GPUInfo struct {
+	Compositing bool `json:"compositing"`
+}
+
 // System is the service of the desktop itself: the browser, the proxy.
 type System struct {
 	core *Core
@@ -418,6 +428,11 @@ func (s *System) SetProxy(rules, username, password string) ProxyResult {
 	}
 	s.core.saveSettings(appSettings{ProxyRules: rules, ProxyUser: username, ProxyPass: password})
 	return ProxyResult{Success: true}
+}
+
+// GPU returns whether the webview draws on the GPU.
+func (s *System) GPU() GPUInfo {
+	return GPUInfo{Compositing: compositing}
 }
 
 // GetProxy returns the proxy the app uses.

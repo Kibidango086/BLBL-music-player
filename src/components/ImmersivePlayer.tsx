@@ -36,10 +36,13 @@ export default function ImmersivePlayer({ onClose }: ImmersivePlayerProps) {
   const [swapTransRom, setSwapTransRom] = usePersistedState('swapTransRom', false)
 
   // Persisted settings — lyric appearance
-  // Off by default: WebKitGTK re-rasterizes every blurred lyric line on each
-  // frame, which runs the immersive player at 11 fps instead of 60. The
-  // setting stays.
-  const [enableBlur, setEnableBlur] = usePersistedState('enableBlur', false)
+  // On where the webview draws on the GPU (html.composited): a software one
+  // re-rasterizes every blurred lyric line on each frame, at 11 fps instead
+  // of 60. The setting stays either way.
+  const [enableBlur, setEnableBlur] = usePersistedState(
+    'enableBlur',
+    document.documentElement.classList.contains('composited'),
+  )
   const [enableScale, setEnableScale] = usePersistedState('enableScale', true)
   const [enableSpring, setEnableSpring] = usePersistedState('enableSpring', true)
   const [hidePassed, setHidePassed] = usePersistedState('hidePassed', false)

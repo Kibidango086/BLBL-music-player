@@ -60,6 +60,15 @@ export interface FavUpper {
   face: string;
 }
 
+/**
+ * GPUInfo tells the page whether the webview draws on the GPU: it keeps its
+ * softest effects, the sway of the background and the blur of lyrics, only
+ * when it can afford them.
+ */
+export interface GPUInfo {
+  compositing: boolean;
+}
+
 /** LoginResult is the outcome of the login window. */
 export interface LoginResult {
   success: boolean;
@@ -211,6 +220,10 @@ export const Bilibili = {
 
 /** System is the service of the desktop itself: the browser, the proxy. */
 export const System = {
+  /** GPU returns whether the webview draws on the GPU. */
+  gpu(): Promise<GPUInfo> {
+    return call("System.GPU");
+  },
   /** GetProxy returns the proxy the app uses. */
   getProxy(): Promise<ProxyInfo> {
     return call("System.GetProxy");
