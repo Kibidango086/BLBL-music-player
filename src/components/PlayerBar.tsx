@@ -10,6 +10,7 @@ import { useI18nStore } from '@/i18n'
 import { formatDuration } from '@/lib/bilibili-api'
 import { cn, stripHtml } from '@/lib/utils'
 import { imageURL } from '@/lib/media'
+import { useMetaStore, useTrackCover, useTrackName, useTrackArtist } from '@/store/metaStore'
 
 const PRESET_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
@@ -105,6 +106,22 @@ export function PlayerBar({ onAlbumClick }: PlayerBarProps) {
     return () => window.removeEventListener('keydown', handler)
   }, [isPlaying, volume, setPlaying, playNext, playPrevious, setVolume])
 
+  // The song the music databases know, when they know one: its name and its
+  // cover, with the video's title and thumbnail as the fallback. These are
+  // hooks, so they stay above the early return for a player with no track.
+  const trackTitle = useTrackName(currentTrack?.bvid, stripHtml(currentTrack?.title || ''))
+  const trackPic = useTrackCover(currentTrack?.bvid, currentTrack?.pic || '')
+  const trackOwner = useTrackArtist(
+    currentTrack?.bvid,
+    currentTrack?.owner?.name || t('common.unknown')
+  )
+
+  useEffect(() => {
+    if (currentTrack?.bvid) {
+      void useMetaStore.getState().lookup(currentTrack.bvid, stripHtml(currentTrack.title))
+    }
+  }, [currentTrack?.bvid, currentTrack?.title])
+
   if (!currentTrack) {
     return (
       <div className="h-20 flex items-center justify-center px-6">
@@ -112,10 +129,6 @@ export function PlayerBar({ onAlbumClick }: PlayerBarProps) {
       </div>
     )
   }
-
-  const trackTitle = stripHtml(currentTrack.title)
-  const trackPic = currentTrack.pic || ''
-  const trackOwner = currentTrack.owner?.name || t('common.unknown')
 
   return (
     <TooltipProvider delayDuration={200}>

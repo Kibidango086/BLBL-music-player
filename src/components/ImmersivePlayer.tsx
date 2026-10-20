@@ -10,7 +10,9 @@ import { imageURL } from '@/lib/media'
 import { formatDuration } from '@/lib/bilibili-api'
 import { useI18nStore } from '@/i18n'
 import { usePlayerStore } from '@/store/playerStore'
+import { useMetaStore, useTrackMeta } from '@/store/metaStore'
 import { usePersistedState } from '@/lib/usePersistedState'
+import { Input } from '@/components/ui/input'
 
 interface ImmersivePlayerProps { onClose: () => void }
 
@@ -26,9 +28,37 @@ export default function ImmersivePlayer({ onClose }: ImmersivePlayerProps) {
     setPlaybackRate, setRepeatMode, toggleShuffle, playNext, playPrevious
   } = usePlayerStore()
 
+  const { override, meta, pending } = useTrackMeta(currentTrack?.bvid)
+  const songName = override?.song || meta?.title || ''
+  const artistName = override?.artist || meta?.artist || ''
+
   const [lyricLines, setLyricLines] = useState<any[]>([])
   const [lyricLoading, setLyricLoading] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [songDraft, setSongDraft] = useState('')
+  const [artistDraft, setArtistDraft] = useState('')
+
+  // The user knows the song better than the video's title does: what they
+  // type here is what the lyrics and the cover are looked up by.
+  const openEditor = () => {
+    setSongDraft(override?.song ?? (meta?.title || ''))
+    setArtistDraft(override?.artist ?? (meta?.artist || ''))
+    setShowSettings(false)
+    setEditing(true)
+  }
+  const saveEditor = async () => {
+    if (!currentTrack) return
+    await useMetaStore
+      .getState()
+      .setOverride(currentTrack.bvid, currentTrack.title, { song: songDraft.trim(), artist: artistDraft.trim() })
+    setEditing(false)
+  }
+  const resetEditor = async () => {
+    if (!currentTrack) return
+    await useMetaStore.getState().clearOverride(currentTrack.bvid, currentTrack.title)
+    setEditing(false)
+  }
 
   // Persisted settings — lyric content
   const [showTrans, setShowTrans] = usePersistedState('showTrans', true)
@@ -57,15 +87,19 @@ export default function ImmersivePlayer({ onClose }: ImmersivePlayerProps) {
 
   const lrcTime = Math.floor(currentTime * 1000)
 
+  // The lyrics are looked up by the song's name when one is known — the
+  // user's, or the one the music database matched — which is what AMLL's
+  // database indexes, not the video's title.
+  const lyricsQuery = songName || stripHtml(currentTrack?.title || '')
   useEffect(() => {
     if (!currentTrack?.bvid) return
     setLyricLoading(true)
     setLyricLines([])
-    getVideoSubtitles(currentTrack.bvid, currentTrack.cid || 0, stripHtml(currentTrack.title))
+    getVideoSubtitles(currentTrack.bvid, currentTrack.cid || 0, lyricsQuery)
       .then(s => setLyricLines(s))
       .catch(() => setLyricLines([]))
       .finally(() => setLyricLoading(false))
-  }, [currentTrack?.bvid, currentTrack?.cid])
+  }, [currentTrack?.bvid, currentTrack?.cid, lyricsQuery])
 
   const displayLines = useMemo(() => lyricLines.map(l => {
     const line: any = { ...l }
@@ -88,11 +122,13 @@ export default function ImmersivePlayer({ onClose }: ImmersivePlayerProps) {
     </div>
   )
 
-  const title = stripHtml(currentTrack.title)
-  // A tiny cover, scaled up: it reads as the blurred backdrop, and unlike a
-  // CSS blur it costs nothing to composite.
-  const pic = imageURL(currentTrack.pic || '', 256)
-  const owner = currentTrack.owner?.name || t('common.unknown')
+  const title = songName || stripHtml(currentTrack.title)
+  // The album art the music databases have, or the video's thumbnail. A tiny
+  // cover, scaled up: it reads as the blurred backdrop, and unlike a CSS blur
+  // it costs nothing to composite.
+  const cover = override?.cover || meta?.cover || currentTrack.pic || ''
+  const pic = imageURL(cover, 256)
+  const owner = artistName || currentTrack.owner?.name || t('common.unknown')
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: '#111' }}>
@@ -106,7 +142,7 @@ export default function ImmersivePlayer({ onClose }: ImmersivePlayerProps) {
             alt=""
             aria-hidden="true"
             className="absolute inset-0 w-full h-full object-cover"
-            style={{ transform: 'scale(1.12)', willChange: 'transform' }}
+            style={{ transform: 'scale(1.12)' }}
           />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.85))' }} />
         </>
@@ -123,10 +159,61 @@ export default function ImmersivePlayer({ onClose }: ImmersivePlayerProps) {
             {showArtist && <p className="text-white/40 text-xs">{owner}</p>}
           </div>
         )}
-        <Button variant="ghost" size="icon" className="text-white/70 hover:text-white h-10 w-10" onClick={() => setShowSettings(!showSettings)}>
-          <Icon name="tune" size={24} />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white/70 hover:text-white h-10 w-10"
+            onClick={openEditor}
+            title={t('meta.edit')}
+          >
+            <Icon name="edit" size={20} />
+          </Button>
+          <Button variant="ghost" size="icon" className="text-white/70 hover:text-white h-10 w-10" onClick={() => setShowSettings(!showSettings)}>
+            <Icon name="tune" size={24} />
+          </Button>
+        </div>
       </div>
+
+      {/* Song name and cover: what the lyrics and the album art are found by */}
+      {editing && (
+        <div className="absolute right-4 top-16 z-30 p-4 rounded-2xl bg-card border border-border shadow w-72 animate-in fade-in slide-in-from-top-2">
+          <h3 className="text-sm font-bold text-foreground mb-3">{t('meta.title')}</h3>
+          <label className="block text-xs text-muted-foreground mb-2">
+            {t('meta.song')}
+            <Input
+              value={songDraft}
+              onChange={(e) => setSongDraft(e.target.value)}
+              placeholder={stripHtml(currentTrack.title)}
+              className="mt-1 h-8 text-xs"
+              autoFocus
+            />
+          </label>
+          <label className="block text-xs text-muted-foreground mb-3">
+            {t('meta.artist')}
+            <Input
+              value={artistDraft}
+              onChange={(e) => setArtistDraft(e.target.value)}
+              className="mt-1 h-8 text-xs"
+            />
+          </label>
+          <p className="text-[11px] text-muted-foreground mb-3">
+            {pending
+              ? t('meta.matching')
+              : meta?.source
+                ? `${t('meta.source')} ${meta.source === 'deezer' ? 'Deezer' : 'iTunes'}`
+                : t('meta.fallback')}
+          </p>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={saveEditor} className="flex-1">
+              {t('meta.match')}
+            </Button>
+            <Button size="sm" variant="outline" onClick={resetEditor}>
+              {t('meta.reset')}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Settings panel — organized by sections matching amll-page */}
       {showSettings && (

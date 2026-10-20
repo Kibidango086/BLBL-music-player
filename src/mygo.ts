@@ -141,6 +141,19 @@ export interface Stat {
   favorite: number;
 }
 
+/**
+ * TrackMeta is what a music database says about a song: its name, its artist,
+ * its album and its cover. Source names the database it came from, and is
+ * empty when none matched.
+ */
+export interface TrackMeta {
+  title: string;
+  artist: string;
+  album: string;
+  cover: string;
+  source: string;
+}
+
 /** Video is a bilibili video, as the page shows it. */
 export interface Video {
   bvid: string;
@@ -254,5 +267,21 @@ export const System = {
    */
   streamURL(raw: string): Promise<string> {
     return call("System.StreamURL", raw);
+  },
+} as const;
+
+/**
+ * Music looks a song up in music databases, for the cover of the player and
+ * for a song name better than a video's title.
+ */
+export const Music = {
+  /**
+   * Lookup asks Deezer, then iTunes, for the song of a video. The name the user
+   * gave wins; without one it searches what the title seems to name. A hit only
+   * counts when it shares a word with what was searched for: a search engine
+   * always returns something, and a wrong cover is worse than the video's own.
+   */
+  lookup(title: string, song: string, artist: string): Promise<TrackMeta> {
+    return call("Music.Lookup", title, song, artist);
   },
 } as const;

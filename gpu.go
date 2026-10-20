@@ -1,51 +1,18 @@
 package main
 
-import (
-	"os"
-	"path/filepath"
-	"strings"
-)
+import "os"
 
 // compositing is whether the app expects WebKitGTK to draw on the GPU.
 //
-// MyGo sets WEBKIT_DISABLE_DMABUF_RENDERER=1 unless the environment already
-// has it, to avoid blank windows on NVIDIA, virtual machines and containers.
-// Without that renderer WebKitGTK falls back to software: an animated page
-// then repaints the whole window per frame, at about 3 fps. On the GPUs the
-// renderer works with, Intel and AMD, letting it through gives the app its
-// animations at 60 fps; everywhere else MyGo's default stays, and the page
-// keeps its animations off (see src/index.css).
+// MyGo disables WebKitGTK's DMA-BUF renderer by default, to avoid blank
+// windows on NVIDIA, virtual machines and containers, and without it WebKitGTK
+// paints in software: an animated page then costs a whole-window repaint per
+// frame, at about 3 fps. With the renderer the same page runs at 60 fps, so
+// the page animates only when it is on (src/index.css, ImmersivePlayer).
 //
-// The user's own setting wins: WEBKIT_DISABLE_DMABUF_RENDERER=0 turns the
-// renderer on, any other value turns it off.
+// It is opt-in, because with it this WebKitGTK build draws the immersive
+// player black on the Intel + Wayland machine the port was tested on: set
+// WEBKIT_DISABLE_DMABUF_RENDERER=0 to turn it on where it works.
 func setupCompositing() bool {
-	if value, ok := os.LookupEnv("WEBKIT_DISABLE_DMABUF_RENDERER"); ok {
-		return value == "0"
-	}
-	if !intelOrAMD() {
-		return false
-	}
-	_ = os.Setenv("WEBKIT_DISABLE_DMABUF_RENDERER", "0")
-	return true
-}
-
-// intelOrAMD reports whether a graphics device of the machine is Intel's or
-// AMD's, the vendors WebKitGTK's DMA-BUF renderer works with, as the PCI
-// vendor IDs of its DRM cards say.
-func intelOrAMD() bool {
-	cards, err := filepath.Glob("/sys/class/drm/card[0-9]*/device/vendor")
-	if err != nil {
-		return false
-	}
-	for _, card := range cards {
-		vendor, err := os.ReadFile(card)
-		if err != nil {
-			continue
-		}
-		switch strings.TrimSpace(string(vendor)) {
-		case "0x8086", "0x1002": // Intel, AMD
-			return true
-		}
-	}
-	return false
+	return os.Getenv("WEBKIT_DISABLE_DMABUF_RENDERER") == "0"
 }

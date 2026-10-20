@@ -42,6 +42,11 @@ const canvasInfo = () => {
   return "c=" + list.length + "[" + sizes.join(",") + "]";
 };
 const history = [];
+const overlay = document.createElement("pre");
+overlay.id = "e2e-report";
+overlay.style.cssText =
+  "position:fixed;left:8px;bottom:8px;z-index:2147483647;margin:0;padding:6px 8px;max-width:90vw;" +
+  "font:11px/1.3 monospace;color:#9f9;background:rgba(0,0,0,.75);white-space:pre-wrap;pointer-events:none";
 let reportErr = "-";
 const report = (s) => {
   // A native window's title is hard to read on Wayland: report over HTTP too.
@@ -57,6 +62,8 @@ const report = (s) => {
 };
 const say = (s) => {
   report(s);
+  if (!overlay.isConnected) document.body.append(overlay);
+  overlay.textContent = "E2E " + s;
   state = s;
   history.push(s);
   const a = document.querySelector("audio");
@@ -77,7 +84,11 @@ HTMLMediaElement.prototype.play = function () {
   return p;
 };
 async function search() {
-  const input = document.querySelector("input");
+  let input = null;
+  for (let i = 0; i < 40 && !input; i++) {
+    input = document.querySelector("input");
+    if (!input) await sleep(250);
+  }
   if (!input) return say("no-input");
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
   setter.call(input, query);
@@ -116,6 +127,7 @@ async function immersive() {
   await sleep(1200);
   const art = document.querySelector('[title="进入沉浸播放"]');
   if (!art) return say("no-album");
+  if (steps.includes("noblur")) localStorage.setItem("blbl-imm-enableBlur", "false");
   art.click();
   for (let i = 0; i < 60; i++) {
     await sleep(250);
@@ -283,6 +295,7 @@ async function surround() {
 async function imfpsx() {
   const art = document.querySelector('[title="进入沉浸播放"]');
   if (!art) return say("no-album");
+  if (steps.includes("noblur")) localStorage.setItem("blbl-imm-enableBlur", "false");
   art.click();
   await sleep(2500);
   const style = (id, css) => {
@@ -317,6 +330,20 @@ async function quickfps() {
   const c = await fpsFor(3000);
   document.title = "E2E " + a + "," + b + "," + c + " class=" + document.documentElement.className;
 }
+async function songinfo() {
+  await sleep(2000);
+  let direct = "-";
+  try {
+    const m = await window.mygo.call("Music.Lookup", "夜に駆ける", "", "");
+    direct = m.source + ":" + m.title + ":" + (m.cover || "").split("/")[2];
+  } catch (e) { direct = "ERR " + e.message; }
+  say("direct=" + direct);
+  await sleep(3000);
+  const art = document.querySelector('[title="进入沉浸播放"] img');
+  const cover = art?.currentSrc || art?.src || "-";
+  const label = document.querySelector('[title="进入沉浸播放"]')?.parentElement?.innerText?.split(String.fromCharCode(10))[0] || "-";
+  say("bar cover=" + (cover.split("/")[2] || "-") + " name=" + label.slice(0, 24));
+}
 async function filters() {
   const list = [...document.querySelectorAll("*")]
     .map((e) => ({ e, f: getComputedStyle(e).filter }))
@@ -328,6 +355,7 @@ async function filters() {
 async function imfps() {
   const art = document.querySelector('[title="进入沉浸播放"]');
   if (!art) return say("no-album");
+  if (steps.includes("noblur")) localStorage.setItem("blbl-imm-enableBlur", "false");
   art.click();
   await sleep(2500);
   const fps = await fpsFor(2000);
@@ -396,6 +424,7 @@ async function run() {
   if (steps.includes("imfpsx")) await imfpsx();
   if (steps.includes("filters")) await filters();
   if (steps.includes("quickfps")) await quickfps();
+  if (steps.includes("songinfo")) await songinfo();
   if (steps.includes("immersive")) await immersive();
   if (steps.includes("wait")) await sleep(4000), say(state);
   if (steps.includes("images")) await images();

@@ -19,6 +19,7 @@ func main() {
 	// TypeScript client to src/mygo.ts.
 	mygo.Bind(&Bilibili{core: core})
 	mygo.Bind(&System{core: core})
+	mygo.Bind(&Music{core: core})
 
 	// The menu bar is hidden until Alt, as the app's was; its Edit menu is
 	// what gives the page's fields copy and paste.
