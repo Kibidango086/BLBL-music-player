@@ -84,6 +84,9 @@ jobs:
             platform=$(basename "$(dirname "$f")")
             name=$(basename "$f")
             case "$name" in
+              # The macOS disk image has no architecture in its name, and there
+              # is one per run.
+              *.dmg) cp "$f" "release/$name" ;;
               *amd64*|*arm64*|*x86_64*|*aarch64*|*universal*) cp "$f" "release/$name" ;;
               *) cp "$f" "release/${name%.*}-$platform.${name##*.}" ;;
             esac
