@@ -95,11 +95,11 @@ export default function ImmersivePlayer({ onClose }: ImmersivePlayerProps) {
     if (!currentTrack?.bvid) return
     setLyricLoading(true)
     setLyricLines([])
-    getVideoSubtitles(currentTrack.bvid, currentTrack.cid || 0, lyricsQuery)
+    getVideoSubtitles(currentTrack.bvid, currentTrack.cid || 0, lyricsQuery, artistName)
       .then(s => setLyricLines(s))
       .catch(() => setLyricLines([]))
       .finally(() => setLyricLoading(false))
-  }, [currentTrack?.bvid, currentTrack?.cid, lyricsQuery])
+  }, [currentTrack?.bvid, currentTrack?.cid, lyricsQuery, artistName])
 
   const displayLines = useMemo(() => lyricLines.map(l => {
     const line: any = { ...l }

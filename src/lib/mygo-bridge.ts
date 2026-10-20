@@ -85,8 +85,13 @@ export function installElectronAPI(): void {
     // needs. A custom scheme cannot feed the webview's media pipeline.
     biliPlayUrl: async (bvid, cid) => {
       const streams = await Bilibili.playURL(bvid, cid);
+      // The best quality this webview can decode: FLAC where GStreamer has it,
+      // otherwise the highest AAC. Bilibili offers all of them, in no order.
+      const probe = document.createElement("audio");
+      const playable = streams.filter((s) => !s.format || probe.canPlayType(s.format) !== "");
+      const chosen = playable.length > 0 ? playable : streams;
       return Promise.all(
-        streams.map(async (stream) => ({
+        chosen.map(async (stream) => ({
           ...stream,
           url: await System.streamURL(stream.url),
         })),
@@ -111,8 +116,8 @@ export function installElectronAPI(): void {
 
     biliAddToFav: (aidList, mediaId) => Bilibili.addToFav(aidList, mediaId),
 
-    biliSubtitles: (bvid, cid, title = "") =>
-      Bilibili.subtitles(bvid, cid, title),
+    biliSubtitles: (bvid, cid, title = "", artist = "") =>
+      Bilibili.subtitles(bvid, cid, title, artist),
 
     setProxy: async (config) => {
       const result = await System.setProxy(

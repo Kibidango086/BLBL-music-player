@@ -108,11 +108,17 @@ export interface Owner {
   face: string;
 }
 
-/** PlayURL is one audio stream of a video. */
+/**
+ * PlayURL is one audio stream of a video. Format is the MIME type, for the
+ * page to ask the webview whether it can play it, and Label names the quality
+ * as bilibili does.
+ */
 export interface PlayURL {
   url: string;
   quality: number;
   format: string;
+  bitrate: number;
+  label: string;
 }
 
 /** ProxyInfo is the proxy the app uses. */
@@ -202,7 +208,12 @@ export const Bilibili = {
   openLogin(): Promise<LoginResult> {
     return call("Bilibili.OpenLogin");
   },
-  /** PlayURL returns the audio streams of a video, best first. */
+  /**
+   * PlayURL returns the audio streams of a video, best first: FLAC (Hi-Res),
+   * then Dolby, then the highest bitrate AAC. The API lists the AAC streams in
+   * no order at all — 64 kbps often comes first — so the list is built from the
+   * ids and bitrates rather than from the order.
+   */
   playURL(bvid: string, cid: number): Promise<PlayURL[]> {
     return call("Bilibili.PlayURL", bvid, cid);
   },
@@ -219,11 +230,12 @@ export const Bilibili = {
     return call("Bilibili.SetCookies", cookies);
   },
   /**
-   * Subtitles returns the lyrics of a video: AMLL's database first, bilibili's
-   * subtitles next, as the app did.
+   * Subtitles returns the lyrics of a video, trying the sources in turn: AMLL's
+   * database, LRCLIB, NetEase Cloud Music, and the video's own subtitles last,
+   * which are captions rather than lyrics. artist narrows the search.
    */
-  subtitles(bvid: string, cid: number, title: string): Promise<LyricLine[]> {
-    return call("Bilibili.Subtitles", bvid, cid, title);
+  subtitles(bvid: string, cid: number, title: string, artist: string): Promise<LyricLine[]> {
+    return call("Bilibili.Subtitles", bvid, cid, title, artist);
   },
   /** VideoInfo returns one video, with the cid of its first page. */
   videoInfo(bvid: string): Promise<Video> {

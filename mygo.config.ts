@@ -3,7 +3,7 @@ import { defineConfig } from "mygo-cli";
 export default defineConfig({
   name: "BLBL Music Player",
   identifier: "com.opencode.blbl-music-player",
-  version: "3.0.3",
+  version: "3.1.0",
   copyright: "© Kibidango086",
   // `mygo dev` runs devCommand and loads devUrl; `mygo build` runs
   // buildCommand and embeds frontendDist into the app.

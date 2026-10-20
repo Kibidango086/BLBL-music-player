@@ -204,7 +204,7 @@ func TestLiveLyrics(t *testing.T) {
 	bili := &Bilibili{core: core}
 
 	// AMLL's database, which the app reads first.
-	lines := bili.Subtitles(context.Background(), "BV1xx411c7mD", 0, "「夜に駆ける」YOASOBI")
+	lines := bili.Subtitles(context.Background(), "BV1xx411c7mD", 0, "夜に駆ける", "YOASOBI")
 	if len(lines) == 0 {
 		t.Fatal("Subtitles found no lyrics for a well-known song")
 	}
@@ -243,7 +243,7 @@ func TestFixture(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PlayURL: %v", err)
 	}
-	lyrics := bili.Subtitles(context.Background(), videos[0].Bvid, info.Cid, videos[0].Title)
+	lyrics := bili.Subtitles(context.Background(), videos[0].Bvid, info.Cid, videos[0].Title, "")
 	if len(lyrics) == 0 {
 		t.Fatal("Subtitles returned nothing")
 	}
@@ -262,4 +262,39 @@ func TestFixture(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("wrote %d videos, %d lyric lines, %d streams", len(videos), len(lyrics), len(streams))
+}
+
+// TestLiveAudioQuality checks that the best audio stream is offered first: the
+// API lists the AAC tiers in no order, and 64 kbps often comes first.
+func TestLiveAudioQuality(t *testing.T) {
+	core := liveOnly(t)
+	bili := &Bilibili{core: core}
+
+	videos, err := bili.Search("夜に駆ける", 1, 1)
+	if err != nil || len(videos) == 0 {
+		t.Fatalf("Search: %v", err)
+	}
+	info, err := bili.VideoInfo(videos[0].Bvid)
+	if err != nil {
+		t.Fatalf("VideoInfo: %v", err)
+	}
+	streams, err := bili.PlayURL(videos[0].Bvid, info.Cid)
+	if err != nil || len(streams) == 0 {
+		t.Fatalf("PlayURL: %v (%d streams)", err, len(streams))
+	}
+	for _, s := range streams {
+		t.Logf("quality=%d bitrate=%d label=%q format=%q", s.Quality, s.Bitrate, s.Label, s.Format)
+	}
+	best := streams[0]
+	for _, s := range streams[1:] {
+		if s.Quality > best.Quality || (s.Quality == best.Quality && s.Bitrate > best.Bitrate) {
+			t.Fatalf("the best stream is not first: %+v before %+v", best, s)
+		}
+	}
+	if best.Quality == 1 && best.Bitrate < 190000 {
+		t.Fatalf("a low bitrate AAC was offered first: %+v", best)
+	}
+	if best.Format != "" && !strings.HasPrefix(best.Format, "audio/") {
+		t.Fatalf("the format is not a MIME type: %q", best.Format)
+	}
 }

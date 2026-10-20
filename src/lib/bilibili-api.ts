@@ -33,9 +33,14 @@ export interface SubtitleItem {
   roman?: string
 }
 
-export async function getVideoSubtitles(bvid: string, cid: number, title?: string): Promise<SubtitleItem[]> {
+export async function getVideoSubtitles(
+  bvid: string,
+  cid: number,
+  title?: string,
+  artist?: string
+): Promise<SubtitleItem[]> {
   try {
-    return await window.electronAPI.biliSubtitles(bvid, cid, title)
+    return await window.electronAPI.biliSubtitles(bvid, cid, title, artist)
   } catch {
     return []
   }

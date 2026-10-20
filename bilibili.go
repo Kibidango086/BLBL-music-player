@@ -50,11 +50,15 @@ type Video struct {
 	Cid         int64  `json:"cid,omitempty"`
 }
 
-// PlayURL is one audio stream of a video.
+// PlayURL is one audio stream of a video. Format is the MIME type, for the
+// page to ask the webview whether it can play it, and Label names the quality
+// as bilibili does.
 type PlayURL struct {
 	URL     string `json:"url"`
 	Quality int64  `json:"quality"`
 	Format  string `json:"format"`
+	Bitrate int64  `json:"bitrate"`
+	Label   string `json:"label"`
 }
 
 // FavFolder is a favorites folder of the signed-in user.
@@ -197,37 +201,61 @@ func (b *Bilibili) VideoInfo(bvid string) (Video, error) {
 	return adaptVideoInfo(data, bvid), nil
 }
 
-// PlayURL returns the audio streams of a video, best first.
+// PlayURL returns the audio streams of a video, best first: FLAC (Hi-Res),
+// then Dolby, then the highest bitrate AAC. The API lists the AAC streams in
+// no order at all — 64 kbps often comes first — so the list is built from the
+// ids and bitrates rather than from the order.
 func (b *Bilibili) PlayURL(bvid string, cid int64) ([]PlayURL, error) {
-	u := fmt.Sprintf("%s/x/player/playurl?bvid=%s&cid=%d&fnval=16&platform=web",
+	// fnval asks for DASH with every feature (Hi-Res, Dolby, 8K, AV1); without
+	// it bilibili offers only the lossy tiers.
+	u := fmt.Sprintf("%s/x/player/playurl?bvid=%s&cid=%d&fnval=4048&fnver=0&fourk=1&platform=web",
 		apiBase, url.QueryEscape(bvid), cid)
 	data, err := b.core.client.getJSON(context.Background(), u)
 	if err != nil {
 		return nil, err
 	}
-	out := []PlayURL{}
+
+	streams := []PlayURL{}
 	if dash, ok := data["dash"].(map[string]any); ok {
+		// The Hi-Res audio sits apart from the rest.
+		if flac, ok := dash["flac"].(map[string]any); ok {
+			if audio, ok := flac["audio"].(map[string]any); ok {
+				if s, ok := audioStream(audio, 3, "FLAC"); ok {
+					streams = append(streams, s)
+				}
+			}
+		}
+		// Dolby Atmos, which most webviews cannot decode.
+		if dolby, ok := dash["dolby"].(map[string]any); ok {
+			if audios, ok := dolby["audio"].([]any); ok {
+				for _, a := range audios {
+					if audio, ok := a.(map[string]any); ok {
+						if s, ok := audioStream(audio, 2, "Dolby"); ok {
+							streams = append(streams, s)
+						}
+					}
+				}
+			}
+		}
 		if audios, ok := dash["audio"].([]any); ok {
 			for _, a := range audios {
 				audio, ok := a.(map[string]any)
 				if !ok {
 					continue
 				}
-				raw := firstString(audio, "baseUrl", "base_url", "url")
-				if raw == "" {
-					if backup, ok := audio["backupUrl"].([]any); ok && len(backup) > 0 {
-						raw, _ = backup[0].(string)
-					} else if backup, ok := audio["backup_url"].([]any); ok && len(backup) > 0 {
-						raw, _ = backup[0].(string)
-					}
+				label := ""
+				if bitrate := asInt(audio["bandwidth"]); bitrate > 0 {
+					label = fmt.Sprintf("%d kbps AAC", bitrate/1000)
 				}
-				if raw != "" {
-					out = append(out, PlayURL{URL: raw, Quality: asInt(audio["id"]), Format: firstString(audio, "codecs")})
+				if s, ok := audioStream(audio, 1, label); ok {
+					streams = append(streams, s)
 				}
 			}
 		}
 	}
-	if len(out) == 0 {
+
+	// Older videos have no DASH: one MP4, usually AAC.
+	if len(streams) == 0 {
 		if durl, ok := data["durl"].([]any); ok {
 			for _, d := range durl {
 				item, ok := d.(map[string]any)
@@ -241,17 +269,50 @@ func (b *Bilibili) PlayURL(bvid string, cid int64) ([]PlayURL, error) {
 					}
 				}
 				if raw != "" {
-					out = append(out, PlayURL{URL: raw, Quality: asInt(item["size"]), Format: "audio/mp4"})
+					streams = append(streams, PlayURL{
+						URL: raw, Quality: asInt(item["size"]), Format: "audio/mp4", Label: "AAC",
+					})
 				}
 			}
 		}
 	}
-	for i := range out {
-		if out[i].Format == "" {
-			out[i].Format = "audio/mp4"
+
+	sort.SliceStable(streams, func(a, c int) bool {
+		if streams[a].Quality != streams[c].Quality {
+			return streams[a].Quality > streams[c].Quality
+		}
+		return streams[a].Bitrate > streams[c].Bitrate
+	})
+	if len(streams) > 0 {
+		return streams, nil
+	}
+	return nil, fmt.Errorf("没有可用的音源")
+}
+
+// audioStream reads one DASH audio entry. rank is its tier: 3 FLAC, 2 Dolby,
+// 1 AAC, which is the order they are offered in.
+func audioStream(audio map[string]any, rank int64, label string) (PlayURL, bool) {
+	raw := firstString(audio, "baseUrl", "base_url", "url")
+	if raw == "" {
+		for _, key := range []string{"backupUrl", "backup_url"} {
+			if backup, ok := audio[key].([]any); ok && len(backup) > 0 {
+				raw, _ = backup[0].(string)
+				if raw != "" {
+					break
+				}
+			}
 		}
 	}
-	return out, nil
+	if raw == "" {
+		return PlayURL{}, false
+	}
+	return PlayURL{
+		URL:     raw,
+		Quality: rank,
+		Format:  firstString(audio, "mimeType", "mime_type", "codecs"),
+		Bitrate: asInt(audio["bandwidth"]),
+		Label:   label,
+	}, true
 }
 
 // Popular returns the popular videos: the app has none, as before.
@@ -433,11 +494,18 @@ func (b *Bilibili) AddToFav(aidList []int64, mediaID int64) (AddToFavResult, err
 	return AddToFavResult{Total: len(aidList), Failed: len(failures), Errors: failures}, nil
 }
 
-// Subtitles returns the lyrics of a video: AMLL's database first, bilibili's
-// subtitles next, as the app did.
-func (b *Bilibili) Subtitles(ctx context.Context, bvid string, cid int64, title string) []LyricLine {
-	if title != "" {
+// Subtitles returns the lyrics of a video, trying the sources in turn: AMLL's
+// database, LRCLIB, NetEase Cloud Music, and the video's own subtitles last,
+// which are captions rather than lyrics. artist narrows the search.
+func (b *Bilibili) Subtitles(ctx context.Context, bvid string, cid int64, title string, artist string) []LyricLine {
+	if strings.TrimSpace(title) != "" {
 		if lines := b.core.searchAMLLDB(ctx, title); len(lines) > 0 {
+			return lines
+		}
+		if lines := b.core.lrclib(ctx, title, artist); len(lines) > 0 {
+			return lines
+		}
+		if lines := b.core.netease(ctx, title, artist); len(lines) > 0 {
 			return lines
 		}
 	}
