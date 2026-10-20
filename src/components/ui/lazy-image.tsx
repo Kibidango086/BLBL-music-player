@@ -37,7 +37,7 @@ export function LazyImage({ src, wrapperClassName, className, ...props }: LazyIm
       {inView ? (
         <img
           ref={imgRef}
-          src={imageURL(src)}
+          src={imageURL(src, 320)}
           className={`${className} ${loaded ? '' : 'opacity-0'}`}
           onLoad={() => setLoaded(true)}
           loading="lazy"

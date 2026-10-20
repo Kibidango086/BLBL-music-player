@@ -66,8 +66,7 @@ bun run build -- -platform darwin/universal,windows/amd64,linux/amd64
 ```
 
 产物：macOS `.app` + `.dmg`，Windows `.exe` + 安装包，Linux 可执行文件 + 桌面项 +
-`.deb` + `.rpm`（RPM 由 `scripts/build-rpm.sh` 从同一个 `.deb` 的文件布局生成，两者安装
-的内容一致）。MyGo 不需要 cgo，所以任何一台机器都能交叉构建所有平台（macOS 的签名与
+`.deb`。MyGo 不需要 cgo，所以任何一台机器都能交叉构建所有平台（macOS 的签名与
 dmg 需要 macOS 机器）。`.github/workflows/build.yml` 在打 tag 时构建并上传到 Release。
 
 ## 结构
@@ -109,6 +108,14 @@ src/               原版前端，几乎原封不动
 2. **图片为什么要改写 URL。** B 站图片 CDN 对陌生的 Referer 直接 403，原版是靠
    Electron 给所有请求注入 Referer 解决的。现在所有图片都经 `getHighResPic()` /
    `LazyImage` 改写到同一个本机服务器，由 Go 带 Referer 取回并缓存到磁盘。
+
+## 性能
+
+界面运行在系统的 webview 里，而 WebKitGTK 在这台机器上不做硬件合成：**任何持续播放的动画都会让整页重绘**。因此做了三处针对性处理（都写进了代码注释）：
+
+- 背景光斑的两段漂移动画停掉了（原本 3 fps，静止后 60 fps）；
+- 列表缩略图向 B 站 CDN 要 320px 的图，不再拿 4K 原图（一页 20 张图从 ~1 MB/张降到 ~13 KB/张），图片由 Go 边下边发并落盘缓存；
+- 沉浸播放的背景不用 `filter: blur()`，改用一张 256px 的封面放大（视觉接近，合成几乎零成本）；歌词的逐行模糊（`enableBlur`）默认关闭，设置里仍可打开。
 
 ## 测试
 

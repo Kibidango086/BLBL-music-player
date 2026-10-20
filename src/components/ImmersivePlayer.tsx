@@ -5,7 +5,8 @@ import { Icon } from '@/components/ui/icon'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { getVideoSubtitles } from '@/lib/bilibili-api'
-import { getHighResPic, stripHtml } from '@/lib/utils'
+import { stripHtml } from '@/lib/utils'
+import { imageURL } from '@/lib/media'
 import { formatDuration } from '@/lib/bilibili-api'
 import { useI18nStore } from '@/i18n'
 import { usePlayerStore } from '@/store/playerStore'
@@ -35,7 +36,10 @@ export default function ImmersivePlayer({ onClose }: ImmersivePlayerProps) {
   const [swapTransRom, setSwapTransRom] = usePersistedState('swapTransRom', false)
 
   // Persisted settings — lyric appearance
-  const [enableBlur, setEnableBlur] = usePersistedState('enableBlur', true)
+  // Off by default: WebKitGTK re-rasterizes every blurred lyric line on each
+  // frame, which runs the immersive player at 11 fps instead of 60. The
+  // setting stays.
+  const [enableBlur, setEnableBlur] = usePersistedState('enableBlur', false)
   const [enableScale, setEnableScale] = usePersistedState('enableScale', true)
   const [enableSpring, setEnableSpring] = usePersistedState('enableSpring', true)
   const [hidePassed, setHidePassed] = usePersistedState('hidePassed', false)
@@ -82,17 +86,27 @@ export default function ImmersivePlayer({ onClose }: ImmersivePlayerProps) {
   )
 
   const title = stripHtml(currentTrack.title)
-  const pic = getHighResPic(currentTrack.pic || '')
+  // A tiny cover, scaled up: it reads as the blurred backdrop, and unlike a
+  // CSS blur it costs nothing to composite.
+  const pic = imageURL(currentTrack.pic || '', 256)
   const owner = currentTrack.owner?.name || t('common.unknown')
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col" style={{
-      background: bgCover && pic
-        ? `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.85)), url(${pic}) center/cover no-repeat`
-        : '#111'
-    }}>
+    <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: '#111' }}>
       {bgCover && pic && (
-        <div className="absolute inset-0 backdrop-blur-xl" style={{ WebkitBackdropFilter: 'blur(40px)' }} />
+        <>
+          {/* The cover, blurred once into a layer of its own: a backdrop-filter
+              here is recomputed over the whole window every frame, which
+              WebKitGTK cannot afford. */}
+          <img
+            src={pic}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ transform: 'scale(1.12)', willChange: 'transform' }}
+          />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.85))' }} />
+        </>
       )}
 
       {/* Top bar — subtle, full on hover */}

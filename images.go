@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -68,32 +69,55 @@ func (c *Core) serveImage(w http.ResponseWriter, r *http.Request) {
 	dir := filepath.Join(c.cacheDir(), "images")
 	file := filepath.Join(dir, hex.EncodeToString(sum[:]))
 
-	serve := func(data []byte, contentType string) {
-		if contentType == "" {
-			contentType = http.DetectContentType(data)
-		}
-		w.Header().Set("Content-Type", contentType)
-		w.Header().Set("Cache-Control", "public, max-age=1209600, immutable")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		_, _ = w.Write(data)
-	}
+	w.Header().Set("Cache-Control", "public, max-age=1209600, immutable")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 
+	// A picture of the last two weeks is served from the cache, and its
+	// bytes go to the page as the file reads.
 	if stat, err := os.Stat(file); err == nil && time.Since(stat.ModTime()) < imageMaxAge {
-		if data, err := os.ReadFile(file); err == nil && len(data) > 0 {
-			serve(data, contentTypeFor(raw))
+		f, err := os.Open(file)
+		if err == nil {
+			defer f.Close()
+			w.Header().Set("Content-Type", contentTypeFor(raw))
+			http.ServeContent(w, r, "", stat.ModTime(), f)
 			return
 		}
 	}
 
-	data, status, err := c.client.get(r.Context(), raw)
-	if err != nil || status != http.StatusOK || len(data) == 0 {
+	// Otherwise it streams from bilibili as it arrives, into the cache and
+	// the page at once, so a large cover does not wait for its last byte.
+	res, err := c.client.open(r.Context(), raw, nil)
+	if err != nil {
 		http.Error(w, "the picture could not be fetched", http.StatusBadGateway)
 		return
 	}
-	if err := os.MkdirAll(dir, 0o755); err == nil {
-		_ = os.WriteFile(file, data, 0o644)
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		http.Error(w, "the picture could not be fetched", http.StatusBadGateway)
+		return
 	}
-	serve(data, contentTypeFor(raw))
+	if ct := res.Header.Get("Content-Type"); ct != "" {
+		w.Header().Set("Content-Type", ct)
+	} else {
+		w.Header().Set("Content-Type", contentTypeFor(raw))
+	}
+	if n := res.Header.Get("Content-Length"); n != "" {
+		w.Header().Set("Content-Length", n)
+	}
+	w.WriteHeader(http.StatusOK)
+
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		_, _ = io.Copy(w, res.Body)
+		return
+	}
+	tmp, err := os.CreateTemp(dir, "img-*")
+	if err != nil {
+		_, _ = io.Copy(w, res.Body)
+		return
+	}
+	_, _ = io.Copy(io.MultiWriter(w, tmp), res.Body)
+	tmp.Close()
+	_ = os.Rename(tmp.Name(), file)
 }
 
 func contentTypeFor(raw string) string {

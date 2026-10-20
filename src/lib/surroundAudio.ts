@@ -576,7 +576,9 @@ export class SurroundEngine {
 
     if (result !== 'ok') {
       this.applyBypass()
-      if (!this.notifiedUnsupported) {
+      // 'error' 多为自动播放被拦截（探测的 play() 需要用户手势），不是音源问题：
+      // 保持原生播放，等下一次播放/切歌/手势再探测，别报「不支持」。
+      if (result === 'silent' && !this.notifiedUnsupported) {
         this.notifiedUnsupported = true
         this.onUnsupported?.(url)
       }

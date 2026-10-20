@@ -41,10 +41,12 @@ const canvasInfo = () => {
   const sizes = list.map((c) => c.width + "x" + c.height + "@" + (c.clientWidth + "x" + c.clientHeight));
   return "c=" + list.length + "[" + sizes.join(",") + "]";
 };
+const history = [];
 const say = (s) => {
   state = s;
+  history.push(s);
   const a = document.querySelector("audio");
-  document.title = "E2E " + s + " | " + audioInfo() + " | " + canvasInfo() +
+  document.title = "E2E " + history.join(" || ") + " | " + audioInfo() + " | " + canvasInfo() +
     " | paused=" + (a ? a.paused : "?") + " | playErr=" + (window.__playError || "-");
 };
 window.addEventListener("error", (e) => {
@@ -107,6 +109,209 @@ async function immersive() {
   }
   say("immersive-no-canvas:" + document.querySelectorAll("div").length);
 }
+async function fpsFor(ms) {
+  let frames = 0;
+  const f0 = performance.now();
+  await new Promise((done) => {
+    const tick = () => {
+      frames++;
+      if (performance.now() - f0 < ms) requestAnimationFrame(tick);
+      else done();
+    };
+    requestAnimationFrame(tick);
+  });
+  return Math.round((frames * 1000) / ms);
+}
+async function fpsx() {
+  await sleep(1500);
+  const base = await fpsFor(2000);
+  const style = (css) => { const s = document.createElement("style"); s.textContent = css; document.head.append(s); return s; };
+  style("body::before,body::after{display:none!important}");
+  await sleep(400);
+  const noBlobs = await fpsFor(2000);
+  style("*{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}");
+  await sleep(400);
+  const noBackdrop = await fpsFor(2000);
+  style("*{animation:none!important;transition:none!important}");
+  await sleep(400);
+  const noAnim = await fpsFor(2000);
+  say("fpsx base=" + base + " noBlobs=" + noBlobs + " noBackdrop=" + noBackdrop + " noAnim=" + noAnim);
+}
+async function fpsw() {
+  await sleep(1200);
+  const style = (id, css) => {
+    let s = document.getElementById(id);
+    if (!s) { s = document.createElement("style"); s.id = id; document.head.append(s); }
+    s.textContent = css;
+  };
+  const results = {};
+  results.base = await fpsFor(1500);
+  style("w", "body::before,body::after{animation:none!important}");
+  await sleep(300);
+  results.staticBlur = await fpsFor(1500);
+  style("w", "body::before,body::after{animation:none!important;filter:none!important}");
+  await sleep(300);
+  results.staticNoBlur = await fpsFor(1500);
+  style("w", "@keyframes blobSway1{0%,100%{transform:translate3d(0,0,0) scale(1)}25%{transform:translate3d(45px,-35px,0) scale(1.08)}50%{transform:translate3d(-20px,28px,0) scale(.92)}75%{transform:translate3d(-40px,-15px,0) scale(1.05)}}@keyframes blobSway2{0%,100%{transform:translate3d(0,0,0) scale(1)}25%{transform:translate3d(-40px,35px,0) scale(1.09)}50%{transform:translate3d(28px,-25px,0) scale(.91)}75%{transform:translate3d(35px,15px,0) scale(1.07)}}body::before{animation-name:blobSway1}body::after{animation-name:blobSway2}");
+  await sleep(400);
+  results.threeD = await fpsFor(1500);
+  style("w", "body::before,body::after{filter:none!important}@keyframes blobSway1{0%,100%{transform:translate3d(0,0,0) scale(1)}25%{transform:translate3d(45px,-35px,0) scale(1.08)}50%{transform:translate3d(-20px,28px,0) scale(.92)}75%{transform:translate3d(-40px,-15px,0) scale(1.05)}}@keyframes blobSway2{0%,100%{transform:translate3d(0,0,0) scale(1)}25%{transform:translate3d(-40px,35px,0) scale(1.09)}50%{transform:translate3d(28px,-25px,0) scale(.91)}75%{transform:translate3d(35px,15px,0) scale(1.07)}}");
+  await sleep(400);
+  results.threeDNoBlur = await fpsFor(1500);
+  style("w", "@keyframes blobPulse{0%,100%{opacity:.85}50%{opacity:.4}}body::before{animation:blobPulse 9s ease-in-out infinite!important}body::after{animation:blobPulse 13s ease-in-out infinite!important}");
+  await sleep(400);
+  results.animOpacity = await fpsFor(1500);
+  style("w", "body::before,body::after{animation:none!important}");
+  await sleep(400);
+  results.animNone = await fpsFor(1500);
+  style("w", "");
+  say("fpsw " + JSON.stringify(results));
+}
+async function fpsv() {
+  await sleep(1500);
+  const style = (id, css) => {
+    let s = document.getElementById(id);
+    if (!s) { s = document.createElement("style"); s.id = id; document.head.append(s); }
+    s.textContent = css;
+  };
+  style("v", "");
+  await sleep(300);
+  const base = await fpsFor(1500);
+  style("v", "body::before,body::after{filter:none!important}");
+  await sleep(300);
+  const noFilter = await fpsFor(1500);
+  style("v", "body::before,body::after{will-change:transform!important;transform:translateZ(0)!important}");
+  await sleep(300);
+  const promoted = await fpsFor(1500);
+  style("v", "body::before,body::after{filter:none!important;will-change:transform!important;transform:translateZ(0)!important}");
+  await sleep(300);
+  const both = await fpsFor(1500);
+  style("v", "");
+  say("fpsv base=" + base + " noFilter=" + noFilter + " promoted=" + promoted + " both=" + both);
+}
+async function perf() {
+  const t0 = performance.now();
+  const input = document.querySelector("input");
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+  setter.call(input, query);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  await sleep(120);
+  input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  let cards = 0;
+  for (let i = 0; i < 200; i++) {
+    await sleep(50);
+    cards = document.querySelectorAll("div.group").length;
+    if (cards) break;
+  }
+  const tCards = Math.round(performance.now() - t0);
+  await sleep(1500);
+  const imgs = [...document.images];
+  const loaded1 = imgs.filter((i) => i.naturalWidth > 0).length;
+  await sleep(2000);
+  const loaded2 = [...document.images].filter((i) => i.naturalWidth > 0).length;
+
+  const res = performance.getEntriesByType("resource").filter((r) => r.initiatorType === "img" || /\.(jpg|png)/.test(r.name));
+  const slow = res.sort((a, b) => b.duration - a.duration).slice(0, 3).map((r) => Math.round(r.duration) + "ms/" + Math.round(r.transferSize / 1024) + "k");
+
+  let frames = 0;
+  const f0 = performance.now();
+  await new Promise((done) => {
+    const tick = () => {
+      frames++;
+      if (performance.now() - f0 < 3000) requestAnimationFrame(tick);
+      else done();
+    };
+    requestAnimationFrame(tick);
+  });
+  const fps = Math.round(frames / 3);
+  say("perf cards=" + cards + "@" + tCards + "ms imgs=" + loaded1 + "/" + imgs.length + "->" + loaded2 + "/" + imgs.length +
+      " fps=" + fps + " slow=" + slow.join(","));
+}
+async function surround() {
+  const a = document.querySelector("audio");
+  if (!a) return say("no-audio");
+  const url = a.currentSrc || a.src;
+
+  // A muted element plays without a user gesture. The question: does Web
+  // Audio still read its samples, and is the cross-origin stream readable?
+  let peakMuted = 0;
+  let trace = [];
+  let err = "-";
+  try {
+    const probe = new Audio();
+    probe.crossOrigin = "anonymous";
+    probe.muted = true;
+    probe.preload = "auto";
+    probe.src = url;
+    await probe.play();
+    trace.push("after-play:" + probe.paused + "/" + probe.currentTime.toFixed(1));
+    await sleep(700);
+    trace.push("700ms:" + probe.paused + "/" + probe.currentTime.toFixed(1));
+    const ctx = new AudioContext();
+    const src = ctx.createMediaElementSource(probe);
+    const an = ctx.createAnalyser();
+    src.connect(an);
+    an.connect(ctx.destination);
+    await sleep(1000);
+    trace.push("graph:" + probe.paused + "/" + probe.currentTime.toFixed(1));
+    const buf = new Float32Array(an.fftSize);
+    for (let i = 0; i < 8; i++) {
+      an.getFloatTimeDomainData(buf);
+      for (const v of buf) peakMuted = Math.max(peakMuted, Math.abs(v));
+      await sleep(120);
+    }
+    trace.push("sampled:" + probe.paused + "/" + probe.currentTime.toFixed(1));
+    probe.pause();
+  } catch (e) { err = e.name + ":" + e.message; }
+  say("surround mutedPeak=" + peakMuted.toFixed(5) + " cors=" + a.crossOrigin + " trace=" + trace.join(" ") + " err=" + err);
+}
+
+async function imfpsx() {
+  const art = document.querySelector('[title="进入沉浸播放"]');
+  if (!art) return say("no-album");
+  art.click();
+  await sleep(2500);
+  const style = (id, css) => {
+    let s = document.getElementById(id);
+    if (!s) { s = document.createElement("style"); s.id = id; document.head.append(s); }
+    s.textContent = css;
+  };
+  const r = {};
+  r.base = await fpsFor(1500);
+  style("i", "img{filter:none!important}");
+  await sleep(300);
+  r.noImgFilter = await fpsFor(1500);
+  style("i", "[class*=lyric] *{filter:none!important}");
+  await sleep(300);
+  r.noLyricFilter = await fpsFor(1500);
+  style("i", "*{filter:none!important}");
+  await sleep(300);
+  r.noFilter = await fpsFor(1500);
+  style("i", "*{filter:none!important;transition:none!important}");
+  await sleep(300);
+  r.noTransition = await fpsFor(1500);
+  style("i", "*,*::before,*::after{animation:none!important;transition:none!important;filter:none!important}");
+  await sleep(300);
+  r.noAnim = await fpsFor(1500);
+  style("i", "");
+  say("imfpsx " + JSON.stringify(r));
+}
+async function filters() {
+  const list = [...document.querySelectorAll("*")]
+    .map((e) => ({ e, f: getComputedStyle(e).filter }))
+    .filter(({ f }) => f && f !== "none")
+    .slice(0, 6)
+    .map(({ e, f }) => ((e.className || e.tagName || "").toString().slice(0, 26) + "=" + f));
+  say("filters count=" + list.length + " " + list.join(" | "));
+}
+async function imfps() {
+  const art = document.querySelector('[title="进入沉浸播放"]');
+  if (!art) return say("no-album");
+  art.click();
+  await sleep(2500);
+  const fps = await fpsFor(2000);
+  say("imfps=" + fps);
+}
 async function login() {
   say("login-opening");
   window.electronAPI.biliOpenLogin().then((r) => say("login-done:" + JSON.stringify(r)));
@@ -161,6 +366,14 @@ async function run() {
   if (steps.includes("play")) await play();
   if (steps.includes("muteplay")) await muteplay();
   if (steps.includes("login")) await login();
+  if (steps.includes("perf")) await perf();
+  if (steps.includes("fpsx")) await fpsx();
+  if (steps.includes("fpsv")) await fpsv();
+  if (steps.includes("fpsw")) await fpsw();
+  if (steps.includes("surround")) await surround();
+  if (steps.includes("imfps")) await imfps();
+  if (steps.includes("imfpsx")) await imfpsx();
+  if (steps.includes("filters")) await filters();
   if (steps.includes("immersive")) await immersive();
   if (steps.includes("wait")) await sleep(4000), say(state);
   if (steps.includes("images")) await images();

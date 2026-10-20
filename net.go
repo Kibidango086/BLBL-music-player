@@ -289,6 +289,11 @@ func (c *biliClient) client() *http.Client {
 		return c.hc
 	}
 	tr := http.DefaultTransport.(*http.Transport).Clone()
+	// A list shows twenty covers at once, and they come from a handful of
+	// hosts: keep enough connections to fetch them side by side.
+	tr.MaxIdleConns = 64
+	tr.MaxIdleConnsPerHost = 16
+	tr.IdleConnTimeout = 90 * time.Second
 	if c.rules != "" {
 		if u, err := proxyURL(c.rules, c.user, c.pass); err == nil {
 			tr.Proxy = http.ProxyURL(u)
@@ -371,6 +376,21 @@ func (c *biliClient) request(ctx context.Context, method, rawurl string, headers
 
 func (c *biliClient) get(ctx context.Context, rawurl string) ([]byte, int, error) {
 	return c.request(ctx, http.MethodGet, rawurl, nil, "")
+}
+
+// open starts a GET and hands the response back unread, for a body that
+// streams to the page as it arrives, a picture or an audio stream.
+func (c *biliClient) open(ctx context.Context, rawurl string, headers map[string]string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawurl, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("Referer", referer)
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	return c.client().Do(req)
 }
 
 // getJSON calls the API and returns its data, as fetchBiliAPI did.

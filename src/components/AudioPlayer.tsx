@@ -258,6 +258,9 @@ const {
   return (
     <audio
       ref={audioRef}
+      // The stream is served by Go on 127.0.0.1, another origin: CORS mode
+      // keeps it readable by Web Audio, which the surround effect needs.
+      crossOrigin="anonymous"
       src={audioSrc || undefined}
       onTimeUpdate={handleTimeUpdate}
       onLoadedMetadata={handleLoadedMetadata}

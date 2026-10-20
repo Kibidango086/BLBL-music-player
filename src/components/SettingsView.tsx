@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Icon } from '@/components/ui/icon'
 import { SurroundSettings } from '@/components/SurroundSettings'
-import { getHighResPic } from '@/lib/utils'
+import { imageURL } from '@/lib/media'
 
 export function SettingsView() {
   const { loginStatus, setLoginStatus, setFavFolders, logout, isLoadingLogin, setLoadingLogin } = useUserStore()
@@ -185,7 +185,7 @@ export function SettingsView() {
           {loginStatus?.isLogin ? (
             <div className="mt-4 flex items-center gap-3">
               {loginStatus.face ? (
-                <img src={getHighResPic(loginStatus.face)} alt="avatar" className="w-10 h-10 rounded-full" />
+                <img src={imageURL(loginStatus.face, 96)} alt="avatar" className="w-10 h-10 rounded-full" />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
                   <Icon name="person" size={20} className="text-muted-foreground" />

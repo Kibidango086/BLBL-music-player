@@ -123,6 +123,11 @@
     content: ""; position: fixed; border-radius: 50%;
     filter: blur(80px); z-index: 0; pointer-events: none;
     transition: opacity 0.5s;
+    /* The blur is rasterized once, into a layer of its own that the sway
+       animation only moves: without this, WebKitGTK re-blurs 500px of
+       gradient on every frame, which runs the page at 3 fps instead of 60. */
+    will-change: transform;
+    backface-visibility: hidden;
   }
   body::before {
     width: 500px; height: 500px; top: -150px; left: -120px;
@@ -133,9 +138,13 @@
     background: radial-gradient(circle, var(--blob), transparent 70%);
     opacity: 0.6;
   }
-  /* Body blob sway */
-  body::before { animation: blobSway1 14s ease-in-out infinite; }
-  body::after { animation: blobSway2 18s ease-in-out infinite; }
+  /* No sway: WebKitGTK repaints the whole window for every frame of a moving
+     fixed element (3 fps instead of 60), and no compositing hint helps. The
+     blobs stay, still and blurred; the sway comes back with a webview that
+     composites transforms. */
+  body::before, body::after {
+    animation: none;
+  }
   .material-symbols-rounded {
     font-family: 'Material Symbols Rounded';
     font-weight: normal;

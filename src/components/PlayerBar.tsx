@@ -8,7 +8,8 @@ import { usePlayerStore } from '@/store/playerStore'
 import { useSurroundStore } from '@/store/surroundStore'
 import { useI18nStore } from '@/i18n'
 import { formatDuration } from '@/lib/bilibili-api'
-import { cn, stripHtml, getHighResPic } from '@/lib/utils'
+import { cn, stripHtml } from '@/lib/utils'
+import { imageURL } from '@/lib/media'
 
 const PRESET_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
@@ -130,7 +131,7 @@ export function PlayerBar({ onAlbumClick }: PlayerBarProps) {
             title="进入沉浸播放"
           >
             {trackPic ? (
-              <img src={getHighResPic(trackPic)} alt={trackTitle} className="w-full h-full object-cover" />
+              <img src={imageURL(trackPic, 240)} alt={trackTitle} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full bg-accent" />
             )}

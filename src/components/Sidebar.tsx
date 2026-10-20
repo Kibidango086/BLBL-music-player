@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { cn, getHighResPic } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { imageURL } from '@/lib/media'
 import { Separator } from '@/components/ui/separator'
 import { Icon } from '@/components/ui/icon'
 import { useUserStore } from '@/store/userStore'
@@ -193,7 +194,7 @@ export function Sidebar({ currentView, onViewChange, activeFavId, onFavSelect }:
         {loginStatus?.isLogin ? (
           <div className="flex items-center gap-2 px-2 py-1.5">
             {loginStatus.face ? (
-              <img src={getHighResPic(loginStatus.face)} alt="avatar" className="w-7 h-7 rounded-full flex-shrink-0" />
+              <img src={imageURL(loginStatus.face, 96)} alt="avatar" className="w-7 h-7 rounded-full flex-shrink-0" />
             ) : (
               <div className="w-7 h-7 rounded-full bg-accent flex-shrink-0" />
             )}

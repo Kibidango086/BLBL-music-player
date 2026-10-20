@@ -26,13 +26,18 @@ function isBilibiliPicture(url: string): boolean {
   }
 }
 
-/** The URL a picture is loaded from: the fastest cover bilibili has, fetched
- *  by Go when it is one of bilibili's, and the URL itself otherwise. */
-export function imageURL(raw: string | null | undefined): string {
+/** The URL a picture is loaded from: bilibili's own cover, at the width asked
+ *  for, fetched by Go, which sends the Referer its CDN wants. */
+export function imageURL(raw: string | null | undefined, width?: number): string {
   if (!raw) return "";
   if (proxyBase && raw.startsWith(proxyBase)) return raw;
   const at = raw.indexOf("@");
-  const clean = at >= 0 ? raw.slice(0, at) : raw;
-  if (!proxyBase || !/^https?:\/\//i.test(clean) || !isBilibiliPicture(clean)) return clean;
+  let clean = at >= 0 ? raw.slice(0, at) : raw;
+  if (!/^https?:\/\//i.test(clean)) return clean;
+  if (!isBilibiliPicture(clean)) return clean;
+  // The CDN resizes on request: "@480w.jpg" is a 480px wide JPEG, and
+  // 121 kB of cover becomes 13 kB. A 48px thumbnail needs no 4K source.
+  if (width && /\.(jpe?g|webp)$/i.test(clean)) clean = `${clean}@${width}w.jpg`;
+  if (!proxyBase) return clean;
   return proxyBase + encodeURIComponent(clean);
 }
